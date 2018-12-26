@@ -1,6 +1,8 @@
 #ifndef SSTL_ALGOBASE_H
 #define SSTL_ALGOBASE_H
 
+#include "sstl_iterator.h"
+
 
 namespace sstl {
 
@@ -50,6 +52,32 @@ inline void fill_n(InputIterator first, Size n, const T& value) {
     }
 }
 
+template <class InputIterator>
+inline void iter_swap(InputIterator iter1, InputIterator iter2) {
+    typename iterator_traits<InputIterator>::value_type tmp = *iter1;
+    *iter1 = *iter2;
+    *iter2 = tmp;
+}
+
+template <class T>
+inline const T& max(const T& a, const T& b) {
+    return a < b ? b : a;
+}
+
+template <class T, class Compare>
+inline const T& max(const T& a, const T& b, Compare comp) {
+    return comp(a, b) ? b : a;
+}
+
+template <class T>
+inline const T& min(const T& a, const T& b) {
+    return b < a ? b : a;
+}
+
+template <class T, class Compare>
+inline const T& min(const T& a, const T& b, Compare comp) {
+    return comp(b, a) ? b : a;
+}
 
 } // sstl
 
