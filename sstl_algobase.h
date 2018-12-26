@@ -36,6 +36,21 @@ inline bool euqal(InputIterator1 first1, InputIterator1 last1, InputIterator2 fi
     return true;
 }
 
+template <class InputIterator, class T>
+inline void fill(InputIterator first, InputIterator last, const T& value) {
+    for( ; first != last; ++first) {
+        *first = value;
+    }
+}
+
+template <class InputIterator, class Size, class T>
+inline void fill_n(InputIterator first, Size n, const T& value) {
+    for( ; n > 0; ++first, --n) {
+        *first = value;
+    }
+}
+
+
 } // sstl
 
 
