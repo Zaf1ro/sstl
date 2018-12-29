@@ -1,10 +1,16 @@
 #ifndef SSTL_ITERATOR_H
 #define SSTL_ITERATOR_H
 
-#include "sstl_traits.h"
+#include <cstddef>
 
 
 namespace sstl {
+
+#define __ITERATOR_CATEGORY(_Iter)  __iterator_category(_Iter)
+#define __DISTANCE_TYPE(_Iter)      __distance_type(_Iter)
+#define __VALUE_TYPE(_Iter)         __value_type(_Iter)
+#define __DISTANCE(Iter1, Iter2)    __distance(Iter1, Iter2)
+#define __ADVANCE(Iter, n)          __advance(Iter, n)
 
 // type of iterator determines the type of distance() and advance()
 struct input_iterator_tag {};       // read-only
@@ -17,48 +23,89 @@ struct random_access_iterator_tag:  // all pointer operation with read & write
         public bidirectional_iterator_tag{};
 
 /**
- * @brief   return the type of iterator
+ * @brief   determine certain properties of the iterator
  */
-template <class Iterator>
-inline auto iterator_category()
--> typename iterator_traits<Iterator>::iterator_category {
-    return iterator_traits<Iterator>::iterator_category();
+template <class Iter>
+struct iterator_traits {
+    typedef typename Iter::value_type           value_type;
+    typedef typename Iter::iterator_category    iterator_category;
+    typedef typename Iter::difference_type      difference_type;
+    typedef typename Iter::pointer_type         pointer_type;
+    typedef typename Iter::reference_type       reference_type;
+};
+
+/**
+ * @brief   partial specialization for pointer type
+ */
+template <class T>
+struct iterator_traits<T*> {
+    typedef T           value_type;         // type of value
+    typedef T*          iterator_category;  // type of sstl_iterator
+    typedef ptrdiff_t   difference_type;    // type of distance between iterators
+    typedef T*          pointer_type;       // type of pointer of value
+    typedef T&          reference_type;     // type of reference of value
+};
+
+/**
+ * @brief   partial specialization for const pointer type
+ */
+template <class T>
+struct iterator_traits<const T*> {
+    typedef T           value_type;
+    typedef T*          iterator_category;
+    typedef ptrdiff_t   difference_type;
+    typedef T*          pointer_type;
+    typedef T&          reference_type;
+};
+
+
+/**
+ * @brief   return an object of type of iterator
+ */
+template <class Iter> inline auto
+__iterator_category(const Iter&)
+-> typename iterator_traits<Iter>::iterator_category
+{
+    typedef typename iterator_traits<Iter>::iterator_category _Category;
+    return _Category();
 }
 
 /**
- * @brief   return the type of difference between iterators
+ * @brief   return a pointer to the type of difference between iterators
  */
-template <class Iterator>
-inline auto difference_type()
--> typename iterator_traits<Iterator>::difference_type {
-    return iterator_traits<Iterator>::difference_type(0);
+template <class Iter> inline auto
+__distance_type(const Iter)
+-> typename iterator_traits<Iter>::difference_type*
+{
+    return static_cast<typename iterator_traits<Iter>::difference_type*>(0);
 }
 
 /**
- * @brief   return an empty object of the type of value
+ * @brief   return a pointer to the type of value
  */
-template <class Iterator>
-inline auto value_type()
--> typename iterator_traits<Iterator>::value_type {
-    return iterator_traits<Iterator>::value_type(0);
+template <class Iter> inline auto
+__value_type(const Iter&)
+-> typename iterator_traits<Iter>::value_type*
+{
+    return static_cast<typename iterator_traits<Iter>::value_type*>(0);
 }
 
 /**
- * @brief   return an empty object distance between two iterators
+ * @brief   return the distance between two iterators
  */
-template <class Iterator>
-inline auto distance(Iterator first, Iterator last)
--> typename iterator_traits<Iterator>::difference_type {
-    return __distance(first, last, iterator_category<Iterator>());
+template <class Iter> inline auto
+__distance(Iter first, Iter last)
+-> typename iterator_traits<Iter>::difference_type
+{
+    typedef typename iterator_traits<Iter>::iterator_category Category;
+    return __distance_aux(first, last, Category());
 }
 
-/**
- * @brief   __distance() function overloading for Input Iterator
- */
-template <class InputIterator>
-inline auto __distance(InputIterator first, InputIterator last, input_iterator_tag)
--> typename iterator_traits<InputIterator>::difference_type {
-    typename iterator_traits<InputIterator>::difference_type n = 0;
+template <class InputIter> inline auto
+__distance_aux(InputIter first, InputIter last, input_iterator_tag)
+-> typename iterator_traits<InputIter>::difference_type
+{
+    typename iterator_traits<InputIter>::difference_type n = 0;
     while (first != last) {
         ++n;
         ++first;
@@ -66,54 +113,40 @@ inline auto __distance(InputIterator first, InputIterator last, input_iterator_t
     return n;
 }
 
-/**
- * @brief   __distance() function overloading for Random Access Iterator
- */
-template <class RandomAccessIterator>
-inline auto __distance(RandomAccessIterator first, RandomAccessIterator last, random_access_iterator_tag)
--> typename iterator_traits<RandomAccessIterator>::difference_type {
+template <class RandomAccessIter> inline auto
+__distance_aux(RandomAccessIter first, RandomAccessIter last, random_access_iterator_tag)
+-> typename iterator_traits<RandomAccessIter>::difference_type
+{
     return last - first;
 }
 
 /**
  * @brief   advances the iterator it by n element positions.
  */
-template <class Iterator, class Distance>
-inline void advance(Iterator& i, Distance n) {
-    __advance(i, n, iterator_category<Iterator>());
+template <class Iter, class Distance> inline void
+__advance(Iter& i, Distance n)
+{
+    __advance_aux(i, n, __ITERATOR_CATEGORY(i));
 }
 
-/**
- * @brief   __advance() function overloading for Input Iterator
- */
-template <class InputIterator, class Distance>
-inline void __advance(InputIterator& i, Distance n, input_iterator_tag) {
-    while( n-- ) {
-        ++i;
-    }
+template <class InputIter, class Distance> inline void
+__advance_aux(InputIter& i, Distance n, input_iterator_tag)
+{
+    while( n-- ) ++i;
 }
 
-/**
- * @brief   __advance() function overloading for Bidirectional Iterator
- */
-template <class BidirectionalIterator, class Distance>
-inline void __advance(BidirectionalIterator& i, Distance n, bidirectional_iterator_tag) {
-    if( n >= 0 ) {
-        while( n -- ) {
-            i++;
-        }
-    } else {
-        while( n++ ) {
-            --i;
-        }
-    }
+template <class BidirectionalIter, class Distance> inline void
+__advance_aux(BidirectionalIter& i, Distance n, bidirectional_iterator_tag)
+{
+    if( n >= 0 )
+        while( n -- ) ++i;
+    else
+        while( n++ ) --i;
 }
 
-/**
- * @brief   __advance() function overloading for Random Access Iterator
- */
-template <class RandomAccessIterator, class Distance>
-inline void __advance(RandomAccessIterator& i, Distance n, random_access_iterator_tag) {
+template <class RandomAccessIter, class Distance> inline void
+__advance_aux(RandomAccessIter& i, Distance n, random_access_iterator_tag)
+{
     i += n;
 }
 
