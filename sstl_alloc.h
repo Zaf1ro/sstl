@@ -6,12 +6,130 @@
 #define SSTL_ALLOC_L2_H
 
 #include <cstdlib>
-#include "sstl_alloc_l1.h"
 
-#define TEMPLATE_HEAD template<bool threads, int inst>
-#define ALLOC_L2 __default_alloc_template<threads, inst>
+#define __SSTL_ALLOC_TEMPLATE template<bool threads, int inst>
+#define __SSTL_ALLOC_L1(_Thread, _Inst) __malloc_alloc_template<_Thread, _Inst>
+#define __SSTL_ALLOC_L2(_Thread, _Inst) __default_alloc_template<_Thread, _Inst>
+#define __SSTL_ALLOC(_T, _Alloc)        simple_alloc<_T, _Alloc>
+
+#if 0
+#   include <new>
+#   define __THROW_BAD_ALLOC throw bad_alloc
+#elif !defined(__THROW_BAD_ALLOC)
+#   include <iostream>
+#   define __THROW_BAD_ALLOC \
+            std::cout << "out of memory" << std::endl; \
+            exit(1)
+#endif
+
 
 namespace sstl {
+
+/**
+ * @brief   simple allocator which is a simple wrapper of
+ *          malloc, free and realloc function
+ */
+__SSTL_ALLOC_TEMPLATE class __malloc_alloc_template {
+private:
+    // malloc handler
+    static void (*__malloc_alloc_oom_handler)();
+
+    /**
+     * @brief   request memory when out-of-memory
+     * @param   n: size of memory(bytes) to request
+     * @return  pointer to memory block
+     */
+    static void* oom_malloc(size_t n) {
+        void (*my_alloc_handler)();
+        void* result;
+
+        for(;;) {
+            my_alloc_handler = __malloc_alloc_oom_handler;
+            if(my_alloc_handler == nullptr) {
+                __THROW_BAD_ALLOC;
+            }
+            (*my_alloc_handler)(); // call malloc handler to release memory
+
+            result = malloc(n); // allocate memory
+            if(result) {
+                return result;
+            }
+        }
+    }
+
+    /**
+     * @brief   change the size of memory block
+     * @param   p: pointer to the memory block which will be changed
+     * @param   n: new size of memory block
+     * @return  pointer to the new memory block
+     */
+    static void* oom_realloc(void* p, size_t n) {
+        void (*my_malloc_handler)();
+        void* result;
+
+        for(;;) {
+            my_malloc_handler = __malloc_alloc_oom_handler;
+            if(my_malloc_handler == nullptr) {
+                __THROW_BAD_ALLOC;
+            }
+            (*my_malloc_handler)();
+
+            result = realloc(p, n);
+            if(result) {
+                return result;
+            }
+        }
+    }
+
+    // no need of instance
+    __malloc_alloc_template() = default;
+
+public:
+    /**
+     * @brief   wrapper of malloc
+     * @param   n: size of memory block
+     * @return  pointer to memory block
+     */
+    static void* allocate(size_t n) {
+        void* result = malloc(n);
+        if(result == nullptr) { // out-of-memory
+            result = __SSTL_ALLOC_L1(threads, inst)::oom_malloc(n);
+        }
+        return result;
+    }
+
+    /**
+     * @brief   wrapper of free function
+     * @param   pointer to memory block
+     */
+    static void deallocate(void* p) {
+        free(p);
+    }
+
+    /**
+     * @brief   wrapper of realloc function
+     * @param   p: pointer to memory block which will be changed
+     * @param   new_size: new size of memory block
+     */
+    static void* reallocate(void* p, size_t new_size) {
+        void* result = realloc(p, new_size);
+        if(result == nullptr) { // out-of-memory
+            result = oom_realloc(p, new_size);
+        }
+        return result;
+    }
+
+    /**
+     * @brief   set self-defined out-of-memory handler
+     * @param   pointer to out-of-memory handler function
+     */
+    static auto set_malloc_handler(void(*f)()) -> void(*)() {
+        void (*old)() = __malloc_alloc_oom_handler;
+        __malloc_alloc_oom_handler = f;
+        return old;
+    }
+};
+
 
 union obj {
     union obj* free_list_link; // next pointer
@@ -25,9 +143,9 @@ enum {
 };
 
 /**
- * @brief
+ * @brief   Allocator with independent memory pool
  */
-TEMPLATE_HEAD class __default_alloc_template {
+__SSTL_ALLOC_TEMPLATE class __default_alloc_template {
 private:
     static obj* free_list[__NFREELISTS];
     static char* start_free;    // start of memory pool
@@ -94,7 +212,7 @@ private:
                 }
                 end_free = nullptr;
                 // call allocator level 1, may out-of-memory
-                start_free = (char *)ALLOC_L1::allocate(bytes_to_get);
+                start_free = (char *)__SSTL_ALLOC_L1(threads, inst)::allocate(bytes_to_get);
             }
 
             heap_size += bytes_to_get;
@@ -148,7 +266,7 @@ public:
 
         // call allocator level 1
         if (n > (size_t) __MAX_BYTES) {
-            return ALLOC_L1::allocate(n);
+            return __SSTL_ALLOC_L1(threads, inst)::allocate(n);
         }
 
         // pick up suitable memory block from freelist
@@ -174,7 +292,7 @@ public:
 
         // free memory
         if (n > (size_t) __MAX_BYTES) {
-            ALLOC_L1::deallocate(p);
+            __SSTL_ALLOC_L1(threads, inst)::deallocate(p);
             return;
         }
 
@@ -186,14 +304,43 @@ public:
 };
 
 // initialize static class member
-TEMPLATE_HEAD char* ALLOC_L2::start_free = nullptr;
-TEMPLATE_HEAD char* ALLOC_L2::end_free = nullptr;
-TEMPLATE_HEAD size_t ALLOC_L2::heap_size = 0;
-TEMPLATE_HEAD obj* ALLOC_L2::free_list[__NFREELISTS] = {
+__SSTL_ALLOC_TEMPLATE char* __SSTL_ALLOC_L2(threads, inst)::start_free = nullptr;
+__SSTL_ALLOC_TEMPLATE char* __SSTL_ALLOC_L2(threads, inst)::end_free = nullptr;
+__SSTL_ALLOC_TEMPLATE size_t __SSTL_ALLOC_L2(threads, inst)::heap_size = 0;
+__SSTL_ALLOC_TEMPLATE obj* __SSTL_ALLOC_L2(threads, inst)::free_list[__NFREELISTS] = {
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
+};
+
+
+/**
+ * @brief   wrapper of memory allocator
+ */
+template <class T, class Alloc>
+class simple_alloc {
+private:
+    simple_alloc() = default;
+
+public:
+    static T* allocate() {
+        return (T*) Alloc::allocate(sizeof(T));
+    }
+
+    static T* allocate(size_t n) {
+        return (T*) Alloc::allocate(n);
+    }
+
+    static void deallocate(T* p, size_t n) {
+        if( n != 0 ) {
+            Alloc::deallocate(p, n);
+        }
+    }
+
+    static void deallocate(T* p) {
+        Alloc::deallocate(p, sizeof(T));
+    }
 };
 
 } // sstl
