@@ -3,6 +3,7 @@
 
 #include <new>
 #include "sstl_iterator.h"
+#include "sstl_traits.h"
 
 namespace sstl {
 
@@ -30,21 +31,22 @@ inline void destroy(T* p) {
  * @param   first: an iterator to the beginning of given container
  * @param   last: an iterator to the end of given container
  */
-template <class Iterator>
-inline void destroy(Iterator first, Iterator last) {
-    __destroy(first, last, value_type<first>);
+template <class Iter> inline void
+destroy(Iter first, Iter last) {
+    __destroy(first, last, __VALUE_TYPE(first));
 }
 
-template <class Iterator, class T>
-inline void __destroy(Iterator first, Iterator last, T) {
-    __destroy_aux(first, last, __type_traits<T>::has_trivial_destructor());
+template <class Iter, class T> inline void
+__destroy(Iter first, Iter last, T) {
+    typedef typename __type_traits<T>::has_trivial_destructor Trivial_Des;
+    __destroy_aux(first, last, Trivial_Des());
 }
 
-template <class Iterator>
-inline void __destroy_aux(Iterator first, Iterator last, __true_type) {}
+template <class Iter> inline void
+__destroy_aux(Iter first, Iter last, __true_type) {}
 
-template <class Iterator>
-inline void __destroy_aux(Iterator first, Iterator last, __false_type) {
+template <class Iter> inline void
+__destroy_aux(Iter first, Iter last, __false_type) {
     for( ; first != last; first++) {
         destroy(&*first);
     }
