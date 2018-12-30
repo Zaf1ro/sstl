@@ -198,7 +198,7 @@ __copy(RandomAccessIter first, RandomAccessIter last, OutputIter result, random_
 template <class BidirectionalIter1, class BidirectionalIter2> inline BidirectionalIter2
 copy_backward(BidirectionalIter1 first, BidirectionalIter1 last, BidirectionalIter2 result)
 {
-    typedef typename __type_traits<BidirectionalIter1>::has_trivial_assginment_operator Trivial;
+    typedef typename __type_traits<BidirectionalIter1>::has_trivial_assignment_operator Trivial;
     return __copy_backward_dispatch(first, last, result, Trivial());
 }
 
