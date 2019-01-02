@@ -59,12 +59,12 @@ protected:
             }
         #ifdef __SSTL_USE_EXCEPTIONS // roll back
             {
-                destroy(new_start, new_finish);
+                __DESTROY(new_start, new_finish);
                 m_data_allocator::deallocate(new_start, len);
                 throw;
             }
         #endif
-            destroy(begin(), end());
+            __DESTROY(begin(), end());
             deallocate();
             m_start = new_start;
             m_finish = new_finish;
@@ -150,7 +150,7 @@ public:
 
     ~vector()
     {
-        destroy(m_start, m_finish); // release memory of each element
+        __DESTROY(m_start, m_finish); // release memory of each element
         deallocate();           // release memory of vector
     }
 
@@ -243,12 +243,12 @@ public:
         #ifdef __STL_USE_EXCEPTIONS
             catch(...)
                 {
-                    destroy(new_start, new_finish);
+                    __DESTROY(new_start, new_finish);
                     m_data_allocator::deallocate(new_start, len);
                     throw;
                 }
         #endif
-            destroy(m_start, m_finish);
+            __DESTROY(m_start, m_finish);
             deallocate();
             m_start = new_start;
             m_finish = new_finish;
@@ -262,7 +262,7 @@ public:
     void pop_back()
     {
         if(m_finish != m_start) {
-            destroy(--m_finish);
+            __DESTROY(--m_finish);
         }
     }
 
