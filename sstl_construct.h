@@ -64,7 +64,7 @@ __destroy_t(Iter first, Iter last, __true_type) {}
 template <class Iter> inline void
 __destroy_t(Iter first, Iter last, __false_type) {
     for( ; first != last; first++) {
-        destroy(&*first);
+        __destroy(&*first);
     }
 }
 
