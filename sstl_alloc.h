@@ -11,6 +11,7 @@
 #define __SSTL_ALLOC_L1(_Thread, _Inst) __malloc_alloc_template<_Thread, _Inst>
 #define __SSTL_ALLOC_L2(_Thread, _Inst) __default_alloc_template<_Thread, _Inst>
 #define __SSTL_ALLOC(_T, _Alloc)        simple_alloc<_T, _Alloc>
+#define __SSTL_DEFAULT_ALLOC(_T)        __SSTL_ALLOC(T, __SSTL_ALLOC_L2(true, 1))
 
 #if 0
 #   include <new>
