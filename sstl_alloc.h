@@ -131,22 +131,26 @@ public:
     }
 };
 
+__SSTL_ALLOC_TEMPLATE
+void (* __malloc_alloc_template<threads, inst>::__malloc_alloc_oom_handler)() = nullptr;
 
-union obj {
-    union obj* free_list_link; // next pointer
-    char client_data[1]; // pointer to memory block
-};
-
-enum {
-    __ALIGN = 8, // minimum size of memory block
-    __MAX_BYTES = 128, // maximum size of memory block
-    __NFREELISTS = __MAX_BYTES / __ALIGN // number of memory block in freelist
-};
 
 /**
  * @brief   Allocator with independent memory pool
  */
 __SSTL_ALLOC_TEMPLATE class __default_alloc_template {
+private:
+    union obj {
+        union obj* free_list_link; // next pointer
+        char client_data[1]; // pointer to memory block
+    };
+
+    enum {
+        __ALIGN = 8, // minimum size of memory block
+        __MAX_BYTES = 128, // maximum size of memory block
+        __NFREELISTS = __MAX_BYTES / __ALIGN // number of memory block in freelist
+    };
+
 private:
     static obj* free_list[__NFREELISTS];
     static char* start_free;    // start of memory pool
@@ -261,7 +265,7 @@ public:
      * @param   n: size of memory you want
      * @return  pointer to the start of memory
      */
-    void* allocate(size_t n) {
+    static void* allocate(size_t n) {
         obj **my_free_list;
         obj *result;
 
@@ -308,7 +312,7 @@ public:
 __SSTL_ALLOC_TEMPLATE char* __SSTL_ALLOC_L2(threads, inst)::start_free = nullptr;
 __SSTL_ALLOC_TEMPLATE char* __SSTL_ALLOC_L2(threads, inst)::end_free = nullptr;
 __SSTL_ALLOC_TEMPLATE size_t __SSTL_ALLOC_L2(threads, inst)::heap_size = 0;
-__SSTL_ALLOC_TEMPLATE obj* __SSTL_ALLOC_L2(threads, inst)::free_list[__NFREELISTS] = {
+__SSTL_ALLOC_TEMPLATE typename __default_alloc_template<threads, inst>::obj* __SSTL_ALLOC_L2(threads, inst)::free_list[__NFREELISTS] = {
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
@@ -322,9 +326,11 @@ __SSTL_ALLOC_TEMPLATE obj* __SSTL_ALLOC_L2(threads, inst)::free_list[__NFREELIST
 template <class T, class Alloc>
 class simple_alloc {
 private:
-    simple_alloc() = default;
+
 
 public:
+    simple_alloc() = default;
+
     static T* allocate() {
         return (T*) Alloc::allocate(sizeof(T));
     }

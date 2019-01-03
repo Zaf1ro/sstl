@@ -129,22 +129,29 @@ inline const T& min(const T& a, const T& b, Compare comp) {
     return comp(b, a) ? b : a;
 }
 
-/**
- * @brief   Copies the elements in the range [first,last)
- *          into the range beginning at result
- */
-template <class InputIter, class OutputIter> inline OutputIter 
-copy(InputIter first, InputIter last, OutputIter result)
+template <class InputIter, class OutputIter, class Distance> inline OutputIter
+__copy(InputIter first, InputIter last, OutputIter result, input_iterator_tag, Distance*)
 {
-    return __copy_aux(first, last, result, __VALUE_TYPE(first));
+    for( ; first != last; ++first, ++result) {
+        *result = *first;
+    }
+    return result;
 }
 
-/* has trivial assignment operator or not */
-template <class InputIter, class OutputIter, class T> inline OutputIter
-__copy_aux(InputIter __first, InputIter __last, OutputIter __result, T*)
+template <class RandomAccessIter, class OutputIter, class Distance> inline OutputIter
+__copy(RandomAccessIter first, RandomAccessIter last, OutputIter result, random_access_iterator_tag, Distance*)
 {
-    typedef typename __type_traits<T>::has_trivial_assignment_operator Trivial;
-    return __copy_dispatch(__first, __last, __result, Trivial());
+    for(Distance n = last - first; n > 0; --n, ++result, ++first) {
+        *result = *first;
+    }
+    return result;
+}
+
+template <class T> inline T*
+__copy_trivial(const T* first, const T* last, T* result)
+{
+    memmove(result, first, sizeof(T) * (last - first));
+    return result + (last - first);
 }
 
 template <class InputIter, class OutputIter> inline OutputIter
@@ -166,29 +173,22 @@ __copy_dispatch(T* first, T* last, T* result, __true_type)
     return __copy_trivial(first, last, result);
 }
 
-template <class T> inline T*
-__copy_trivial(const T* first, const T* last, T* result)
+/* has trivial assignment operator or not */
+template <class InputIter, class OutputIter, class T> inline OutputIter
+__copy_aux(InputIter first, InputIter last, OutputIter result, T*)
 {
-    memmove(result, first, sizeof(T) * (last - first));
-    return result + (last - first);
+    typedef typename __type_traits<T>::has_trivial_assignment_operator Trivial;
+    return __copy_dispatch(first, last, result, Trivial());
 }
 
-template <class InputIter, class OutputIter, class Distance> inline OutputIter
-__copy(InputIter first, InputIter last, OutputIter result, input_iterator_tag, Distance*)
+/**
+ * @brief   Copies the elements in the range [first,last)
+ *          into the range beginning at result
+ */
+template <class InputIter, class OutputIter> inline OutputIter 
+copy(InputIter first, InputIter last, OutputIter result)
 {
-    for( ; first != last; ++first, ++result) {
-        *result = *first;
-    }
-    return result;
-}
-
-template <class RandomAccessIter, class OutputIter, class Distance> inline OutputIter
-__copy(RandomAccessIter first, RandomAccessIter last, OutputIter result, random_access_iterator_tag, Distance*)
-{
-    for(Distance n = last - first; n > 0; --n, ++result, ++first) {
-        *result = *first;
-    }
-    return result;
+    return __copy_aux(first, last, result, __VALUE_TYPE(first));
 }
 
 /**

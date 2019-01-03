@@ -27,7 +27,7 @@ public:
 
     ~_vector_base()
     {
-        _deallocate(m_start, m_end_of_storage - m_start);
+        _deallocate();
     }
 
 protected:
@@ -80,7 +80,7 @@ protected:
     void insert_aux(iterator position, const value_type& x)
     {
         if (m_finish != m_end_of_storage) { // enough space to insert
-            __CONSTRUCT(m_finish, *(m_finish - 1));
+            construct(m_finish, *(m_finish - 1));
             ++m_finish;
             copy_backward(position, m_finish - 2, m_finish - 1); // move all elements one step forward
             value_type x_copy = x; // call copy constructor
@@ -97,18 +97,18 @@ protected:
             {
                 // copy all elements before insert position into new room
                 new_finish = uninitialized_copy(m_start, position, new_start);
-                __CONSTRUCT(new_finish, x);
+                construct(new_finish, x);
                 ++new_finish;
                 new_finish = uninitialized_copy(position, m_finish, new_finish);
             }
         #ifdef __SSTL_USE_EXCEPTIONS // roll back
             {
-                __DESTROY(new_start, new_finish);
+                destroy(new_start, new_finish);
                 m_data_allocator::deallocate(new_start, len);
                 throw;
             }
         #endif
-            __DESTROY(begin(), end());
+            destroy(begin(), end());
             _deallocate();
             m_start = new_start;
             m_finish = new_finish;
@@ -210,7 +210,7 @@ public:
     /**
      * @brief    release memory of each element
      */
-    ~vector() { __DESTROY(m_start, m_finish); }
+    ~vector() { destroy(m_start, m_finish); }
 
     /**
      * @brief   Return the first element
@@ -228,7 +228,7 @@ public:
     void push_back(const value_type& value)
     {
         if(m_finish != m_end_of_storage) {
-            __CONSTRUCT(m_finish, value);
+            construct(m_finish, value);
             ++m_finish;
         }
         else
@@ -244,7 +244,7 @@ public:
     {
         size_type n = position - m_start;
         if(m_finish != m_end_of_storage && position != m_finish) {
-            __CONSTRUCT(position, value);
+            construct(position, value);
             ++m_finish;
         }
         else
@@ -301,12 +301,12 @@ public:
         #ifdef __STL_USE_EXCEPTIONS
             catch(...)
                 {
-                    __DESTROY(new_start, new_finish);
+                    destroy(new_start, new_finish);
                     m_data_allocator::deallocate(new_start, len);
                     throw;
                 }
         #endif
-            __DESTROY(m_start, m_finish);
+            destroy(m_start, m_finish);
             _deallocate();
             m_start = new_start;
             m_finish = new_finish;
@@ -320,7 +320,7 @@ public:
     void pop_back()
     {
         if(m_finish != m_start) {
-            __DESTROY(--m_finish);
+            destroy(--m_finish);
         }
     }
 
@@ -332,7 +332,7 @@ public:
         if(position + 1 != m_finish) {
             sstl::copy(position + 1, m_finish, position);
         }
-        __DESTROY(--m_finish);
+        destroy(--m_finish);
         return position;
     }
 
