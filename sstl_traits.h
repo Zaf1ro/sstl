@@ -36,17 +36,6 @@ struct __type_traits<T*> {
     typedef __true_type     is_POD_type;
 };
 
-/* explicit template specialization for POD */
-#define __SSTL_SPEC_TYPE_TRAITS(_Tp)                            \
-template<> struct __type_traits<_Tp>                            \
-{                                                               \
-    typedef __true_type     has_trivial_default_constructor;    \
-    typedef __true_type     has_trivial_copy_constructor;       \
-    typedef __true_type     has_trivial_assginment_operator;    \
-    typedef __true_type     has_trivial_destructor;             \
-    typedef __true_type     is_POD_type;                        \
-};
-
 template<> struct __type_traits<short> {
     typedef __true_type     has_trivial_default_constructor;
     typedef __true_type     has_trivial_copy_constructor;
