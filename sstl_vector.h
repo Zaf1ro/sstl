@@ -102,9 +102,9 @@ protected:
                 new_finish = uninitialized_copy(position, m_finish, new_finish);
             }
         #ifdef __SSTL_USE_EXCEPTIONS // roll back
-            {
+            catch(...) {
                 destroy(new_start, new_finish);
-                m_data_allocator::deallocate(new_start, len);
+                allocator_type::deallocate(new_start, new_size);
                 throw;
             }
         #endif
@@ -191,7 +191,7 @@ public:
      : _Base(n, _a)
     { fill_initialize(n, value); }
 
-    vector(const vector<value_type, allocator_type>& x)
+    explicit vector(const vector<value_type, allocator_type>& x)
      : _Base(x.size(), x.get_allocator())
     { m_finish = uninitialized_copy(x.begin(), x.end(), value_type()); }
 
@@ -298,13 +298,13 @@ public:
                 // copy old elements after insert position to new room
                 new_finish = sstl::uninitialized_copy(position, m_finish, new_finish);
             }
-        #ifdef __STL_USE_EXCEPTIONS
+        #ifdef __SSTL_USE_EXCEPTIONS
             catch(...)
-                {
-                    destroy(new_start, new_finish);
-                    m_data_allocator::deallocate(new_start, len);
-                    throw;
-                }
+            {
+                destroy(new_start, new_finish);
+                allocator_type::deallocate(new_start, new_size);
+                throw;
+            }
         #endif
             destroy(m_start, m_finish);
             _deallocate();
