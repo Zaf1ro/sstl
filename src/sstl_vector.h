@@ -187,7 +187,7 @@ public:
     explicit vector(const allocator_type& _a = allocator_type())
      : _Base(_a) {}
 
-    vector(size_type n, const value_type& value, const allocator_type& _a)
+    vector(size_type n, const_reference value, const allocator_type& _a = allocator_type())
      : _Base(n, _a)
     { fill_initialize(n, value); }
 
@@ -201,6 +201,19 @@ public:
     template <class InputIter>
     vector(InputIter first, InputIter last,
             const allocator_type& _a = allocator_type()): _Base(_a)
+    {
+        typedef typename __is_integer<InputIter>::is_Integral _Is_Integral;
+        __vector_aux(first, last, _Is_Integral());
+    }
+
+    template <class Integer>
+    void __vector_aux(Integer first, Integer last, __true_type)
+    {
+        fill_initialize(first, last);
+    }
+
+    template <class InputIter>
+    void __vector_aux(InputIter first, InputIter last)
     {
         for( ; first != last; ++first) {
             push_back(*first);
