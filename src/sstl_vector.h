@@ -77,13 +77,13 @@ protected:
      * @param   position: iterator before which the content will be inserted
      * @param   value: element value to insert
      */
-    void insert_aux(iterator position, const value_type& x)
+    void _expand_and_insert(iterator position, const value_type& value)
     {
         if (m_finish != m_end_of_storage) { // enough space to insert
             construct(m_finish, *(m_finish - 1));
             ++m_finish;
             copy_backward(position, m_finish - 2, m_finish - 1); // move all elements one step forward
-            value_type x_copy = x; // call copy constructor
+            value_type x_copy = value; // call copy constructor
             *position = x_copy;
         }
         else // expand new room for vector elements
@@ -97,45 +97,50 @@ protected:
             {
                 // copy all elements before insert position into new room
                 new_finish = uninitialized_copy(m_start, position, new_start);
-                construct(new_finish, x);
+                construct(new_finish, value);
                 ++new_finish;
                 new_finish = uninitialized_copy(position, m_finish, new_finish);
             }
-        #ifdef __SSTL_USE_EXCEPTIONS // roll back
+#ifdef __SSTL_USE_EXCEPTIONS // roll back
             catch(...) {
                 destroy(new_start, new_finish);
                 allocator_type::deallocate(new_start, new_size);
                 throw;
             }
-        #endif
+#endif
             destroy(begin(), end());
             _deallocate();
             m_start = new_start;
             m_finish = new_finish;
             m_end_of_storage = new_start + new_size;
         }
-    }
+     }
 
     /**
      * @brief   allocate memory and initialize all elements
      * @param   n: size of memory to be allocated
      * @param   x: value used for initialization of element
      */
-    void fill_initialize(size_type n, const value_type& x)
+    void _fill_initialize(size_type n, const value_type& x)
     {
-        m_start = allocate_and_fill(n, x);
+        m_start = _allocate(n);
+        sstl::uninitialized_fill_n(m_start, n, x);
         m_finish = m_start + n;
         m_end_of_storage = m_finish;
     }
 
-    /**
-     * @brief   same as fill_initialize function
-     */
-    iterator allocate_and_fill(size_type n, const value_type& x)
+    template <class Integer>
+    void _vector_aux(Integer first, Integer last, __true_type)
     {
-        iterator result = _allocate(n);
-        uninitialized_fill_n(result, n, x);
-        return result;
+        _fill_initialize(first, last);
+    }
+
+    template <class InputIter>
+    void _vector_aux(InputIter first, InputIter last, __false_type)
+    {
+        for( ; first != last; ++first) {
+            push_back(*first);
+        }
     }
 
 public:
@@ -189,35 +194,21 @@ public:
 
     vector(size_type n, const_reference value, const allocator_type& _a = allocator_type())
      : _Base(n, _a)
-    { fill_initialize(n, value); }
+    { __fill_initialize(n, value); }
 
     explicit vector(const vector<value_type, allocator_type>& x)
      : _Base(x.size(), x.get_allocator())
     { m_finish = uninitialized_copy(x.begin(), x.end(), value_type()); }
 
     explicit vector(size_type n): _Base(n, allocator_type())
-    { fill_initialize(n, value_type()); }
+    { __fill_initialize(n, value_type()); }
 
     template <class InputIter>
     vector(InputIter first, InputIter last,
             const allocator_type& _a = allocator_type()): _Base(_a)
     {
         typedef typename __is_integer<InputIter>::is_Integral _Is_Integral;
-        __vector_aux(first, last, _Is_Integral());
-    }
-
-    template <class Integer>
-    void __vector_aux(Integer first, Integer last, __true_type)
-    {
-        fill_initialize(first, last);
-    }
-
-    template <class InputIter>
-    void __vector_aux(InputIter first, InputIter last)
-    {
-        for( ; first != last; ++first) {
-            push_back(*first);
-        }
+        _vector_aux(first, last, _Is_Integral());
     }
 
     /**
@@ -245,7 +236,7 @@ public:
             ++m_finish;
         }
         else
-            insert_aux(m_finish, value);
+            _expand_and_insert(m_finish, value);
     }
 
     /**
@@ -261,7 +252,7 @@ public:
             ++m_finish;
         }
         else
-            insert_aux(position, value);
+            _expand_and_insert(position, value);
     }
 
     void insert(iterator position) { insert(position, value_type()); }
