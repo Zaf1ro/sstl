@@ -9,13 +9,6 @@
 
 namespace sstl {
 
-template <class InputIter, class OutputIter, class T> inline OutputIter
-__uninitialized_copy(InputIter first, InputIter last, OutputIter result, T*)
-{
-    typedef typename __type_traits<T>::is_POD_type Is_POD;
-    return __uninitialized_copy_aux(first, last, result, Is_POD());
-}
-
 template<class InputIter, class OutputIter> inline OutputIter
 __uninitialized_copy_aux(InputIter first, InputIter last, OutputIter result, __true_type)
 {
@@ -29,6 +22,13 @@ __uninitialized_copy_aux(InputIter first, InputIter last, OutputIter result, __f
         construct(&*result, *first);
     }
     return result;
+}
+
+template <class InputIter, class OutputIter, class T> inline OutputIter
+__uninitialized_copy(InputIter first, InputIter last, OutputIter result, T*)
+{
+    typedef typename __type_traits<T>::is_POD_type Is_POD;
+    return __uninitialized_copy_aux(first, last, result, Is_POD());
 }
 
 /**

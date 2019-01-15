@@ -3,11 +3,13 @@
 
 #include <cstdlib>
 
+#define __SSTL_DEFAULT_NOBJS 5
+
 #define __SSTL_ALLOC_TEMPLATE           template<bool threads, int inst>
-#define __SSTL_ALLOC_L1(_Thread, _Inst) __malloc_alloc_template<_Thread, _Inst>
-#define __SSTL_ALLOC_L2(_Thread, _Inst) __default_alloc_template<_Thread, _Inst>
-#define __SSTL_ALLOC(_T, _Alloc)        simple_alloc<_T, _Alloc>
-#define __SSTL_DEFAULT_ALLOC(_T)        __SSTL_ALLOC(T, __SSTL_ALLOC_L2(true, 1))
+#define __SSTL_ALLOC_L1(_Thread, _Inst) sstl::__malloc_alloc_template<_Thread, _Inst>
+#define __SSTL_ALLOC_L2(_Thread, _Inst) sstl::__default_alloc_template<_Thread, _Inst>
+#define __SSTL_ALLOC(_T, _Alloc)        sstl::simple_alloc<_T, _Alloc>
+#define __SSTL_DEFAULT_ALLOC(_T)        __SSTL_ALLOC(_T, __SSTL_ALLOC_L2(true, 1))
 
 #if 0
 #   include <new>
@@ -23,7 +25,7 @@
 namespace sstl {
 
 /**
- * @brief   simple allocator which is a simple wrapper of
+ * @brief   Simple allocator which is a simple wrapper of
  *          malloc, free and realloc function
  */
 __SSTL_ALLOC_TEMPLATE class __malloc_alloc_template {
@@ -32,15 +34,15 @@ private:
     static void (*s_malloc_alloc_oom_handler)();
 
     /**
-     * @brief   request memory when out-of-memory
-     * @param   n: size of memory(bytes) to request
-     * @return  pointer to memory block
+     * @brief   Request memory when out-of-memory
+     * @param   __n: size of memory(bytes) to request
+     * @return  Pointer to memory block
      */
     static void* _s_oom_malloc(size_t __n) {
         void (*my_alloc_handler)();
         void* result;
 
-        for(;;) {
+        for(; ; ) {
             my_alloc_handler = s_malloc_alloc_oom_handler;
             if(my_alloc_handler == nullptr) {
                 __THROW_BAD_ALLOC;
@@ -55,26 +57,25 @@ private:
     }
 
     /**
-     * @brief   change the size of memory block
-     * @param   p: pointer to the memory block which will be changed
-     * @param   n: new size of memory block
-     * @return  pointer to the new memory block
+     * @brief   Change the size of memory block
+     * @param   __p: pointer to the memory block which will be changed
+     * @param   __n: new size of memory block
+     * @return  Pointer to the new memory block
      */
-    static void* _s_oom_realloc(void* p, size_t n) {
+    static void* _s_oom_realloc(void *__p, size_t __n) {
         void (*tmp_malloc_handler)();
         void* result;
 
-        for(;;) {
+        for(; ; ) {
             tmp_malloc_handler = s_malloc_alloc_oom_handler;
             if(tmp_malloc_handler == nullptr) {
                 __THROW_BAD_ALLOC;
             }
             (*tmp_malloc_handler)();
 
-            result = realloc(p, n);
-            if(result) {
+            result = realloc(__p, __n);
+            if(result)
                 return result;
-            }
         }
     }
 
@@ -83,46 +84,46 @@ private:
 
 public:
     /**
-     * @brief   wrapper of malloc
-     * @param   n: size of memory block
-     * @return  pointer to memory block
+     * @brief   Wrapper of malloc
+     * @param   __n: size of memory block
+     * @return  Pointer to memory block
      */
-    static void* allocate(size_t n) {
-        void* result = malloc(n);
+    static void* allocate(size_t __n) {
+        void* result = malloc(__n);
         if(result == nullptr) { // out-of-memory
-            result = __SSTL_ALLOC_L1(threads, inst)::_s_oom_malloc(n);
+            result = __SSTL_ALLOC_L1(threads, inst)::_s_oom_malloc(__n);
         }
         return result;
     }
 
     /**
-     * @brief   wrapper of free function
-     * @param   pointer to memory block
+     * @brief   Wrapper of free function
+     * @param   Pointer to memory block
      */
-    static void deallocate(void *p) {
-        free(p);
+    static void deallocate(void *__p) {
+        free(__p);
     }
 
     /**
-     * @brief   wrapper of realloc function
-     * @param   p: pointer to memory block which will be changed
-     * @param   new_size: new size of memory block
+     * @brief   Wrapper of realloc function
+     * @param   __p: pointer to memory block which will be changed
+     * @param   ___new_size: new size of memory block
      */
-    static void* reallocate(void* p, size_t new_size) {
-        void* result = realloc(p, new_size);
+    static void* reallocate(void* __p, size_t __new_size) {
+        void* result = realloc(__p, __new_size);
         if(result == nullptr) { // out-of-memory
-            result = _s_oom_realloc(p, new_size);
+            result = _s_oom_realloc(__p, __new_size);
         }
         return result;
     }
 
     /**
-     * @brief   set self-defined out-of-memory handler
-     * @param   pointer to out-of-memory handler function
+     * @brief   Set self-defined out-of-memory handler
+     * @param   Pointer to out-of-memory handler function
      */
-    static auto set_malloc_handler(void(*f)()) -> void(*)() {
+    static auto set_malloc_handler(void(*__f)()) -> void(*)() {
         void (*old)() = s_malloc_alloc_oom_handler;
-        s_malloc_alloc_oom_handler = f;
+        s_malloc_alloc_oom_handler = __f;
         return old;
     }
 };
@@ -148,88 +149,94 @@ private:
     };
 
 private:
-    static obj *s_free_list[__NFREELISTS];
-    static char *s_start_free;    // start of memory pool
-    static char *s_end_free;      // end of memory pool
-    static size_t s_heap_size;    // total bytes of memory in allocator
+    static obj *m_free_list[__NFREELISTS];
+    static char *m_start_free;    // start of memory pool
+    static char *m_end_free;      // end of memory pool
+    static size_t m_heap_size;    // total bytes of memory in allocator
 
     /**
-     * @brief   convert bytes to the times of __ALIGN
+     * @brief   Convert bytes to the times of __ALIGN
      */
     static inline size_t _s_round_up(size_t __bytes) {
         return (__bytes + __ALIGN - 1) & ~(__ALIGN - 1);
     }
 
     /**
-     * @brief   convert bytes to the index of freelist
+     * @brief   Convert bytes to the index of freelist
      */
     static inline size_t _s_freelist_index(size_t __bytes) {
-        return (__bytes + __ALIGN - 1) / __ALIGN - 1;
+        return ((__bytes + __ALIGN - 1) / __ALIGN - 1);
     }
 
     /**
-     * @brief   allocate number of 'nbjs' memory block
-     *          and the size of memory block is 'size'
+     * @brief   Allocate number of __nbjs memory block
+     *          and the size of memory block is __size
      * @param   __size: size of memory block
      * @param   __nobjs: number of memory block
-     * @return  pointer to the start of memory block
+     * @return  Pointer to the start of memory block
      */
     static char* _s_chunk_alloc(size_t __size, int __nobjs) {
         char *result;
         size_t total_bytes = __size * __nobjs; // total size of bytes
-        size_t bytes_left = s_end_free - s_start_free; // remaining memory in memory pool
+        size_t bytes_left = m_end_free - m_start_free; // remaining memory in memory pool
 
         if (bytes_left >= total_bytes) { // memory pool has enough memory to give
-            result = s_start_free;
-            s_start_free += total_bytes;
+            result = m_start_free;
+            m_start_free += total_bytes;
             return result;
-        } else if (bytes_left >= __size) { // not enough memory for blocks, but enough for one block
+        }
+        else if (bytes_left >= __size) { // not enough memory for blocks, but enough for one block
             __nobjs = (int) (bytes_left / __size); // re-calculate the need of size of memory block
             total_bytes = __size * __nobjs;
-            result = s_start_free;
-            s_start_free += total_bytes;
+            result = m_start_free;
+            m_start_free += total_bytes;
             return result;
-        } else { // no memory left in memory pool
+        }
+        else { // no memory left in memory pool
             if (bytes_left > 0) { // put the rest of memory into free_list
-                obj **my_free_list = s_free_list + _s_freelist_index(bytes_left);
-                ((obj*) s_start_free)->free_list_link = *my_free_list;
-                *my_free_list = (obj*) s_start_free;
+                obj **my_free_list = m_free_list + _s_freelist_index(bytes_left);
+                ((obj*) m_start_free)->free_list_link = *my_free_list;
+                *my_free_list = (obj*) m_start_free;
             }
 
-            size_t bytes_to_get = 2 * total_bytes + _s_round_up(s_heap_size >> 4); // 2 times of need
-            s_start_free = (char*) malloc(bytes_to_get);
+            size_t bytes_to_get = 2 * total_bytes + _s_round_up(m_heap_size >> 4); // 2 times of need
+            m_start_free = (char*) malloc(bytes_to_get);
 
-            if (s_start_free == nullptr) { // if malloc failed, get memory from another memory block chain
+            if (m_start_free == nullptr) { // if malloc failed, get memory from another memory block chain
                 obj **my_free_list, *p;
                 for (size_t i = __size; i <= __MAX_BYTES; i += __ALIGN) {
-                    my_free_list = s_free_list + _s_freelist_index(i);
+                    my_free_list = m_free_list + _s_freelist_index(i);
                     p = *my_free_list;
                     if (p != nullptr) {
                         *my_free_list = p->free_list_link;
-                        s_start_free = (char*) p;
-                        s_end_free = s_start_free + i;
+                        m_start_free = (char*) p;
+                        m_end_free = m_start_free + i;
                         return _s_chunk_alloc(__size, __nobjs);
                     }
                 }
-                s_end_free = nullptr;
+                m_end_free = nullptr;
                 // call allocator level 1, may out-of-memory
-                s_start_free = (char *)__SSTL_ALLOC_L1(threads, inst)::allocate(bytes_to_get);
+                m_start_free = (char *)__SSTL_ALLOC_L1(threads, inst)::allocate(bytes_to_get);
             }
 
-            s_heap_size += bytes_to_get;
-            s_end_free = s_start_free + bytes_to_get;
+            m_heap_size += bytes_to_get;
+            m_end_free = m_start_free + bytes_to_get;
             return _s_chunk_alloc(__size, __nobjs); // recursion
         }
     }
 
     /**
-     * @brief   require memory block
-     * @param   n: size of memory block
-     * @return  pointer to the first memory block
+     * @brief   Require memory block
+     * @param   __n: size of memory block
+     * @return  Pointer to the first memory block
      */
-    static void *refill(size_t __n) {
-    #ifndef NOBJS
-        #define NOBJS 20
+    static void *_s_refill(size_t __n) {
+    #ifdef NOBJS
+        #if NOBJS <= 0
+            NOBJS = __SSTL_DEFAULT_NOBJS
+        #endif
+    #else
+        #define NOBJS __SSTL_DEFAULT_NOBJS
     #endif
         char *chunk = _s_chunk_alloc(__n, NOBJS);
 
@@ -237,7 +244,7 @@ private:
         // NOBJS == 1, no need to put into freelist
         // NOBJS > 1, put the rest of memory block into freelist
         obj *current_obj, *next_obj;
-        obj **my_free_list = s_free_list + _s_freelist_index(__n);
+        obj **my_free_list = m_free_list + _s_freelist_index(__n);
         *my_free_list = next_obj = (obj*) (chunk + __n);
 
         // link all memory block
@@ -252,7 +259,7 @@ private:
             }
         }
     #endif
-        return (void*) chunk;
+        return chunk;
     }
 
 public:
@@ -268,11 +275,11 @@ public:
         }
 
         // pick up suitable memory block from freelist
-        obj **my_free_list = s_free_list + _s_freelist_index(__n);
+        obj **my_free_list = m_free_list + _s_freelist_index(__n);
         obj *result = *my_free_list;
 
         if (result == nullptr) { // no memory available
-            void *r = refill(_s_round_up(__n));
+            void *r = _s_refill(_s_round_up(__n));
             return r;
         }
 
@@ -295,18 +302,18 @@ public:
         }
 
         // put memory into freelist
-        my_free_list = s_free_list + _s_freelist_index(__n);
+        my_free_list = m_free_list + _s_freelist_index(__n);
         q->free_list_link = *my_free_list;
         *my_free_list = q;
     }
 };
 
 // initialize static class member
-__SSTL_ALLOC_TEMPLATE char *__SSTL_ALLOC_L2(threads, inst)::s_start_free = nullptr;
-__SSTL_ALLOC_TEMPLATE char *__SSTL_ALLOC_L2(threads, inst)::s_end_free = nullptr;
-__SSTL_ALLOC_TEMPLATE size_t __SSTL_ALLOC_L2(threads, inst)::s_heap_size = 0;
+__SSTL_ALLOC_TEMPLATE char *__SSTL_ALLOC_L2(threads, inst)::m_start_free = nullptr;
+__SSTL_ALLOC_TEMPLATE char *__SSTL_ALLOC_L2(threads, inst)::m_end_free = nullptr;
+__SSTL_ALLOC_TEMPLATE size_t __SSTL_ALLOC_L2(threads, inst)::m_heap_size = 0;
 __SSTL_ALLOC_TEMPLATE typename __SSTL_ALLOC_L2(threads, inst)::obj*
-__SSTL_ALLOC_L2(threads, inst)::s_free_list[__NFREELISTS] = {
+__SSTL_ALLOC_L2(threads, inst)::m_free_list[__NFREELISTS] = {
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr,
