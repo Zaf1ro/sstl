@@ -161,22 +161,53 @@ protected:
     iterator finish;
 
 public:
-    deque(size_type n, const value_type& value) :start(0), finish(0), map(0), map_size(0) {
+    /**
+     * @brief   Construct an new container from a variety of data sources
+     */
+    deque() {}
+
+    deque(const deque& x)
+    {
+        uninitialized_copy(x.begin(), x.end(), start);
+    }
+
+    deque(size_type n, const value_type& value): start(0), finish(0), map(0), map_size(0) {
         fill_initialize(n ,value);
     }
 
+    explicit deque(size_type n)
+    {
+        fill_initialize(n, value_type());
+    }
+
+    /**
+     * @brief   Returns an iterator to the first element
+     */
     iterator begin() { return start; }
     const_iterator begin() const { return start; }
 
+    /**
+     * @brief   Returns an iterator to the element following the last element
+     */
     iterator end() { return finish; }
     const_iterator end() const { return finish; }
 
+    /**
+     * @brief   Returns a reference to the element at specified location
+     */
     reference operator[](size_type n) {
         return start[(difference_type)n];
     }
 
+    /**
+     * @brief   Returns a reference to the first element
+     */
     reference front() { return *start; }
     const_reference front() const { return *start; }
+
+    /**
+     * @brief   Returns a reference to the last element
+     */
     reference back() {
         iterator tmp = finish;
         --tmp;
@@ -189,14 +220,27 @@ public:
         return *tmp;
     }
 
+    /**
+     * @brief   Returns the number of elements
+     */
     size_type size() const {
         return (size_type)(finish - start);
     }
 
+    /**
+     * @brief   Returns the maximum number of elements
+     */
     size_type max_size() const { return (size_type)-1; }
 
+    /**
+     * @brief   Checks if the container has no elements
+     */
     bool empty() const { return start == finish; }
 
+    /**
+     * @brief   Appends the given value to the end of the container
+     * @param   value: the value of element to append
+     */
     void push_back(const_reference value)
     {
         if(finish.m_cur != finish.m_last - 1) {
@@ -215,12 +259,16 @@ public:
             catch(...) {
                 finish.set_node(finish.m_node - 1);
                 finish.m_cur = finish.m_last - 1;
-                deallocate_node(*(start.m_node + 1));
+                _deallocate_node(*(start.m_node + 1));
             }
 #endif
         }
     }
 
+    /**
+     * @brief   Prepends the given element value to the beginning of container
+     * @param   value: the value of element to prepend
+     */
     void push_front(const_reference value)
     {
         if(start.m_cur != start.m_first) {
@@ -239,25 +287,32 @@ public:
             catch(...) {
                 start.set_node(start.m_node + 1);
                 start.m_cur = start.m_first;
-                deallocate_node(*(start.m_node - 1));
+                _deallocate_node(*(start.m_node - 1));
             }
 #endif
         }
     }
 
+    /**
+     * @brief   Removes the last element of container
+     */
     void pop_back()
     {
         if(finish.m_cur != finish.m_first) {
             --finish.m_cur;
             destroy(finish.m_cur);
         } else {
-            deallocate_node(finish.m_first);
+            _deallocate_node(finish.m_first);
             finish.set_node(finish.node-1);
             finish.m_cur = finish.m_last - 1;
             destroy(finish.m_cur);
         }
     }
 
+    /**
+     * @brief   Removes the first element of container.
+     *          If there are no elements, the behavior is undefined
+     */
     void pop_front()
     {
         if(start.m_cur != start.m_last - 1) {
@@ -265,12 +320,15 @@ public:
             ++start.m_cur;
         } else {
             destroy(start.m_cur);
-            deallocate_node(start.m_first);
+            _deallocate_node(start.m_first);
             start.set_node(start.m_node + 1);
             start.m_cur = start.m_first;
         }
     }
 
+    /**
+     * @brief   Erases all elements from container
+     */
     void clear()
     {
         for(auto node = start.m_node + 1; node < finish.m_node; ++node) {
@@ -289,6 +347,10 @@ public:
         finish = start;
     }
 
+    /**
+     * @brief   Erases the specified elements from container
+     * @param   pos: iterator to the element to remove
+     */
     iterator erase(iterator pos)
     {
         iterator next = pos;
@@ -304,6 +366,10 @@ public:
         return start + index;
     }
 
+    /**
+     * @brief   Insert elements at the specified location in container
+     * @param   pos: iterator before which the content will be inserted
+     */
     iterator insert(iterator pos, const_reference x)
     {
         if(pos.m_cur == start.m_cur) {
@@ -379,15 +445,16 @@ protected:
         finish.set_node(new_start + old_num_nodes - 1);
     }
 
-    inline difference_type buffer_size() {
+    inline size_type buffer_size() {
         return __deque_buf_size(BufSize, sizeof(T));
     }
 
-    void fill_initialize(size_type n, const_reference value)
+    void _fill_initialize(size_type n, const_reference value)
     {
-        create_map_and_nodes(n);
+        _create_map_and_nodes(n);
         map_pointer cur;
-        __SSTL_TRY{
+        __SSTL_TRY
+        {
             for(cur = start.m_node; cur < finish.m_node; ++cur) {
                 uninitialized_fill(*cur, *cur+buffer_size(), value);
                 uninitialized_fill(finish.m_first, finish.m_last, value);
@@ -400,7 +467,7 @@ protected:
 #endif
     }
 
-    void create_map_and_nodes(size_type num_elements) {
+    void _create_map_and_nodes(size_type num_elements) {
         size_type num_nodes = num_elements / buffer_size() + 1;
         map_size = max(initial_map_size(), num_nodes + 2);
         map = map_allocator::allocate(map_size);
@@ -431,7 +498,7 @@ protected:
         return map_allocator::allocate((size_type)buffer_size());
     }
 
-    void deallocate_node(pointer p)
+    void _deallocate_node(pointer p)
     {
         data_allocator::deallocate(p, (size_type)buffer_size());
     }
