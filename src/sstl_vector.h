@@ -247,7 +247,7 @@ public:
     void insert(iterator position, const value_type& value)
     {
         size_type n = position - m_start;
-        if(m_finish != m_end_of_storage && position != m_finish) {
+        if(m_finish != m_end_of_storage && position == m_finish) {
             construct(position, value);
             ++m_finish;
         }
