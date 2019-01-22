@@ -9,7 +9,7 @@
 #define __SSTL_ALLOC_L1(_Thread, _Inst) sstl::__malloc_alloc_template<_Thread, _Inst>
 #define __SSTL_ALLOC_L2(_Thread, _Inst) sstl::__default_alloc_template<_Thread, _Inst>
 #define __SSTL_ALLOC(_T, _Alloc)        sstl::simple_alloc<_T, _Alloc>
-#define __SSTL_DEFAULT_ALLOC(_T)        __SSTL_ALLOC(_T, __SSTL_ALLOC_L2(true, 1))
+#define __SSTL_DEFAULT_ALLOC            __SSTL_ALLOC_L2(1, true)
 
 #if 0
 #   include <new>

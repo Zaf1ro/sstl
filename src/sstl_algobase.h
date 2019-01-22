@@ -75,7 +75,7 @@ inline void fill_n(InputIter first, Size n, const T& value) {
  */
 template <class ForwardIterator>
 inline void iter_swap(ForwardIterator iter1, ForwardIterator iter2) {
-    typename iterator_traits<ForwardIterator>::value_type tmp = *iter1;
+    typename __iterator_traits<ForwardIterator>::value_type tmp = *iter1;
     *iter1 = *iter2;
     *iter2 = tmp;
 }

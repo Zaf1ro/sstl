@@ -1,7 +1,6 @@
 #ifndef SSTL_UNINITIALIZED_H
 #define SSTL_UNINITIALIZED_H
 
-#include "sstl_iterator.h"
 #include "sstl_construct.h"
 #include "sstl_traits.h"
 #include "sstl_algobase.h"

@@ -26,7 +26,7 @@ struct random_access_iterator_tag:  // all pointer operation with read & write
  * @brief   determine certain properties of the iterator
  */
 template <class Iter>
-struct iterator_traits {
+struct __iterator_traits {
     typedef typename Iter::value_type           value_type;
     typedef typename Iter::iterator_category    iterator_category;
     typedef typename Iter::difference_type      difference_type;
@@ -38,7 +38,7 @@ struct iterator_traits {
  * @brief   partial specialization for pointer type
  */
 template <class T>
-struct iterator_traits<T*> {
+struct __iterator_traits<T*> {
     typedef T           value_type;         // type of value
     typedef T*          iterator_category;  // type of sstl_iterator
     typedef ptrdiff_t   difference_type;    // type of distance between iterators
@@ -50,7 +50,7 @@ struct iterator_traits<T*> {
  * @brief   partial specialization for const pointer type
  */
 template <class T>
-struct iterator_traits<const T*> {
+struct __iterator_traits<const T*> {
     typedef T           value_type;
     typedef T*          iterator_category;
     typedef ptrdiff_t   difference_type;
@@ -64,9 +64,9 @@ struct iterator_traits<const T*> {
  */
 template <class Iter> inline auto
 __iterator_category(const Iter&)
--> typename iterator_traits<Iter>::iterator_category
+-> typename __iterator_traits<Iter>::iterator_category
 {
-    typedef typename iterator_traits<Iter>::iterator_category _Category;
+    typedef typename __iterator_traits<Iter>::iterator_category _Category;
     return _Category();
 }
 
@@ -75,9 +75,9 @@ __iterator_category(const Iter&)
  */
 template <class Iter> inline auto
 __distance_type(const Iter)
--> typename iterator_traits<Iter>::difference_type*
+-> typename __iterator_traits<Iter>::difference_type*
 {
-    return static_cast<typename iterator_traits<Iter>::difference_type*>(0);
+    return static_cast<typename __iterator_traits<Iter>::difference_type*>(0);
 }
 
 /**
@@ -85,9 +85,9 @@ __distance_type(const Iter)
  */
 template <class Iter> inline auto
 __value_type(const Iter&)
--> typename iterator_traits<Iter>::value_type*
+-> typename __iterator_traits<Iter>::value_type*
 {
-    return static_cast<typename iterator_traits<Iter>::value_type*>(0);
+    return static_cast<typename __iterator_traits<Iter>::value_type*>(0);
 }
 
 /**
@@ -95,17 +95,17 @@ __value_type(const Iter&)
  */
 template <class Iter> inline auto
 __distance(Iter first, Iter last)
--> typename iterator_traits<Iter>::difference_type
+-> typename __iterator_traits<Iter>::difference_type
 {
-    typedef typename iterator_traits<Iter>::iterator_category Category;
+    typedef typename __iterator_traits<Iter>::iterator_category Category;
     return __distance_aux(first, last, Category());
 }
 
 template <class InputIter> inline auto
 __distance_aux(InputIter first, InputIter last, input_iterator_tag)
--> typename iterator_traits<InputIter>::difference_type
+-> typename __iterator_traits<InputIter>::difference_type
 {
-    typename iterator_traits<InputIter>::difference_type n = 0;
+    typename __iterator_traits<InputIter>::difference_type n = 0;
     while (first != last) {
         ++n;
         ++first;
@@ -115,7 +115,7 @@ __distance_aux(InputIter first, InputIter last, input_iterator_tag)
 
 template <class RandomAccessIter> inline auto
 __distance_aux(RandomAccessIter first, RandomAccessIter last, random_access_iterator_tag)
--> typename iterator_traits<RandomAccessIter>::difference_type
+-> typename __iterator_traits<RandomAccessIter>::difference_type
 {
     return last - first;
 }

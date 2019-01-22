@@ -10,45 +10,42 @@ namespace sstl {
 template <class T, class Alloc>
 class _vector_base {
 public:
-    typedef Alloc           allocator_type;
+    typedef __SSTL_ALLOC(T, Alloc)  allocator_type;
 
-    allocator_type _get_allocator() const { return m_allocator; }
+    allocator_type get_allocator() const
+    { return m_allocator; }
 
-    explicit _vector_base(const allocator_type& _a)
-     : m_allocator(_a), m_start(0), m_finish(0), m_end_of_storage(0) {}
+    T* allocate(size_t n)
+    { return allocator_type::allocate(n); }
 
-    _vector_base(size_t n, const allocator_type& _a)
-     : m_allocator(_a)
+    void deallocate()
     {
-        m_start = _allocate(n);
+        if( m_start )
+            allocator_type::deallocate(m_start, m_end_of_storage - m_start);
+    }
+
+    explicit _vector_base(const allocator_type& __a)
+     : m_allocator(__a), m_start(0), m_finish(0), m_end_of_storage(0) {}
+
+    _vector_base(size_t __n, const allocator_type& __a)
+     : m_allocator(__a)
+    {
+        m_start = allocate(__n);
         m_finish = m_start;
-        m_end_of_storage = m_start + n;
+        m_end_of_storage = m_start + __n;
     }
 
     ~_vector_base()
-    {
-        _deallocate();
-    }
+    { deallocate(); }
 
 protected:
     T* m_start;
     T* m_finish;
     T* m_end_of_storage;
     allocator_type m_allocator;
-
-    T* _allocate(size_t n)
-    {
-        return allocator_type::allocate(n);
-    }
-
-    void _deallocate()
-    {
-        if( m_start )
-            allocator_type::deallocate(m_start, m_end_of_storage - m_start);
-    }
 };
 
-template<class T, class Alloc = __SSTL_DEFAULT_ALLOC(T)>
+template<class T, class Alloc = __SSTL_DEFAULT_ALLOC>
 class vector: protected _vector_base<T, Alloc> {
 private:
     typedef _vector_base<T, Alloc> _Base;
@@ -69,37 +66,38 @@ protected:
     using _Base::m_start;
     using _Base::m_finish;
     using _Base::m_end_of_storage;
-    using _Base::_allocate;
-    using _Base::_deallocate;
+    using _Base::allocate;
+    using _Base::deallocate;
+    using _Base::get_allocator;
 
     /**
      * @brief   Make room for new elements and move old element to new place
      * @param   position: iterator before which the content will be inserted
      * @param   value: element value to insert
      */
-    void _expand_and_insert(iterator position, const value_type& value)
+    void _expand_and_insert(iterator __pos, const value_type& __val)
     {
         if (m_finish != m_end_of_storage) { // enough space to insert
             construct(m_finish, *(m_finish - 1));
             ++m_finish;
-            copy_backward(position, m_finish - 2, m_finish - 1); // move all elements one step forward
-            value_type x_copy = value; // call copy constructor
-            *position = x_copy;
+            copy_backward(__pos, m_finish - 2, m_finish - 1); // move all elements one step forward
+            value_type x_copy = __val; // call copy constructor
+            *__pos = x_copy;
         }
         else // expand new room for vector elements
         {
             const size_type old_size = size();
             const size_type new_size = old_size > 0 ? 2 * old_size : 1;
-            iterator new_start = _allocate(new_size);
+            iterator new_start = allocate(new_size);
             iterator new_finish = new_start;
 
             __SSTL_TRY
             {
                 // copy all elements before insert position into new room
-                new_finish = uninitialized_copy(m_start, position, new_start);
-                construct(new_finish, value);
+                new_finish = uninitialized_copy(m_start, __pos, new_start);
+                construct(new_finish, __val);
                 ++new_finish;
-                new_finish = uninitialized_copy(position, m_finish, new_finish);
+                new_finish = uninitialized_copy(__pos, m_finish, new_finish);
             }
 #ifdef __SSTL_USE_EXCEPTIONS // roll back
             catch(...) {
@@ -109,7 +107,7 @@ protected:
             }
 #endif
             destroy(begin(), end());
-            _deallocate();
+            deallocate();
             m_start = new_start;
             m_finish = new_finish;
             m_end_of_storage = new_start + new_size;
@@ -123,7 +121,7 @@ protected:
      */
     void _fill_initialize(size_type n, const value_type& x)
     {
-        m_start = _allocate(n);
+        m_start = allocate(n);
         sstl::uninitialized_fill_n(m_start, n, x);
         m_finish = m_start + n;
         m_end_of_storage = m_finish;
@@ -147,9 +145,8 @@ public:
     /**
      * @brief   Returns the allocator associated with the container
      */
-     allocator_type get_allocator() const {
-         return _Base::_get_allocator();
-     }
+     allocator_type get_allocator() const
+     { return _Base::get_allocator(); }
 
     /**
      * @brief   Returns an iterator to the beginning of the given container
@@ -181,34 +178,42 @@ public:
     /**
      * @brief   Return the reference to the element at specified position
      */
-    reference operator[](size_type n) { return *(begin() + n); }
-    const_reference operator[](size_type n) const { return *(begin() + n); }
-    reference at(size_type n) { return (*this)[n]; }
-    const_reference at(size_type n) const { return (*this)[n]; }
+    reference operator[](size_type __n)
+    { return *(begin() + __n); }
+
+    const_reference operator[](size_type __n) const
+    { return *(begin() + __n); }
+
+    reference at(size_type __n)
+    { return (*this)[__n]; }
+
+    const_reference at(size_type __n) const
+    { return (*this)[__n]; }
 
     /**
      * @brief   Constructor
      */
-    explicit vector(const allocator_type& _a = allocator_type())
-     : _Base(_a) {}
+    explicit vector(const allocator_type& __a = allocator_type())
+     : _Base(__a) {}
 
-    vector(size_type n, const_reference value, const allocator_type& _a = allocator_type())
-     : _Base(n, _a)
-    { __fill_initialize(n, value); }
+    vector(size_type __n, const_reference __value, const allocator_type& __a = allocator_type())
+     : _Base(__n, __a)
+    { __fill_initialize(__n, __value); }
 
-    explicit vector(const vector<value_type, allocator_type>& x)
-     : _Base(x.size(), x.get_allocator())
-    { m_finish = uninitialized_copy(x.begin(), x.end(), value_type()); }
+    explicit vector(const vector<value_type, allocator_type>& __x)
+     : _Base(__x.size(), __x.get_allocator())
+    { m_finish = uninitialized_copy(__x.begin(), __x.end(), value_type()); }
 
-    explicit vector(size_type n): _Base(n, allocator_type())
-    { __fill_initialize(n, value_type()); }
+    explicit vector(size_type __n): _Base(__n, allocator_type())
+    { __fill_initialize(__n, value_type()); }
 
     template <class InputIter>
-    vector(InputIter first, InputIter last,
-            const allocator_type& _a = allocator_type()): _Base(_a)
+    vector(InputIter __first, InputIter __last,
+            const allocator_type& __a = allocator_type())
+            : _Base(__a)
     {
         typedef typename __is_integer<InputIter>::is_Integral _Is_Integral;
-        _vector_aux(first, last, _Is_Integral());
+        _vector_aux(__first, __last, _Is_Integral());
     }
 
     /**
@@ -229,14 +234,14 @@ public:
     /**
      * @brief   Add the element to the end
      */
-    void push_back(const value_type& value)
+    void push_back(const value_type& __val)
     {
         if(m_finish != m_end_of_storage) {
-            construct(m_finish, value);
+            construct(m_finish, __val);
             ++m_finish;
         }
         else
-            _expand_and_insert(m_finish, value);
+            _expand_and_insert(m_finish, __val);
     }
 
     /**
@@ -244,18 +249,18 @@ public:
      * @param   position: iterator before the content which will be inserted
      * @param   value: element value to insert
      */
-    void insert(iterator position, const value_type& value)
+    void insert(iterator __pos, const value_type& __val)
     {
-        size_type n = position - m_start;
-        if(m_finish != m_end_of_storage && position == m_finish) {
-            construct(position, value);
+        size_type n = __pos - m_start;
+        if(m_finish != m_end_of_storage && __pos == m_finish) {
+            construct(__pos, __val);
             ++m_finish;
         }
         else
-            _expand_and_insert(position, value);
+            _expand_and_insert(__pos, __val);
     }
 
-    void insert(iterator position) { insert(position, value_type()); }
+    void insert(iterator __pos) { insert(__pos, value_type()); }
 
     /**
      * @brief   Insert elements at the specified position from other container
@@ -263,44 +268,44 @@ public:
      * @param   n: number of elements to insert
      * @param   value: element value to insert
      */
-    void insert(iterator position, size_type n, const value_type& value)
+    void insert(iterator __pos, size_type __n, const value_type& __val)
     {
-        if( n <= 0 )
+        if( __n <= 0 )
             return;
 
-        if(m_end_of_storage - m_finish >= n) {
-            value_type copy = value;
-            const size_type elems_after = m_finish - position;
+        if(m_end_of_storage - m_finish >= __n) {
+            value_type copy = __val;
+            const size_type elems_after = m_finish - __pos;
             iterator old_finish = m_finish;
-            if (elems_after > n) {
-                sstl::uninitialized_copy(m_finish - n, m_finish, m_finish);
-                m_finish += n;
-                sstl::copy_backward(position, old_finish - n, old_finish);
-                sstl::fill(position, position + n, copy);
+            if (elems_after > __n) {
+                sstl::uninitialized_copy(m_finish - __n, m_finish, m_finish);
+                m_finish += __n;
+                sstl::copy_backward(__pos, old_finish - __n, old_finish);
+                sstl::fill(__pos, __pos + __n, copy);
             }
             else
             {
-                sstl::uninitialized_fill_n(m_finish, n - elems_after, copy);
-                m_finish += n - elems_after;
-                sstl::uninitialized_copy(position, old_finish, m_finish);
+                sstl::uninitialized_fill_n(m_finish, __n - elems_after, copy);
+                m_finish += __n - elems_after;
+                sstl::uninitialized_copy(__pos, old_finish, m_finish);
                 m_finish += elems_after;
-                sstl::fill(position, old_finish, copy);
+                sstl::fill(__pos, old_finish, copy);
             }
         }
         else
         {
             const size_type old_size = size();
-            const size_type new_size = old_size + max(old_size, n);
-            iterator new_start = _allocate(new_size);
+            const size_type new_size = old_size + max(old_size, __n);
+            iterator new_start = allocate(new_size);
             iterator new_finish = new_start;
             __SSTL_TRY
             {
                 // copy old elements before insert position to new room
-                new_finish = sstl::uninitialized_copy(m_start, position, new_start);
+                new_finish = sstl::uninitialized_copy(m_start, __pos, new_start);
                 // fill with new values
-                new_finish = sstl::uninitialized_fill_n(new_finish, n, value);
+                new_finish = sstl::uninitialized_fill_n(new_finish, __n, __val);
                 // copy old elements after insert position to new room
-                new_finish = sstl::uninitialized_copy(position, m_finish, new_finish);
+                new_finish = sstl::uninitialized_copy(__pos, m_finish, new_finish);
             }
         #ifdef __SSTL_USE_EXCEPTIONS
             catch(...)
@@ -311,7 +316,7 @@ public:
             }
         #endif
             destroy(m_start, m_finish);
-            _deallocate();
+            deallocate();
             m_start = new_start;
             m_finish = new_finish;
             m_end_of_storage = new_start + new_size;
@@ -331,25 +336,25 @@ public:
     /**
      * @brief   Erase the element at the specified position
      */
-    iterator erase(iterator position)
+    iterator erase(iterator __pos)
     {
-        if(position + 1 != m_finish) {
-            sstl::copy(position + 1, m_finish, position);
+        if(__pos + 1 != m_finish) {
+            sstl::copy(__pos + 1, m_finish, __pos);
         }
         destroy(--m_finish);
-        return position;
+        return __pos;
     }
 
     /**
      * @brief   Resize the container to contain certain number of elements
      * @param   new_size: new size of the container
      */
-    void resize(size_type new_size)
+    void resize(size_type __new_size)
     {
-        if(new_size < size())
-            erase(m_start + new_size, end());
+        if(__new_size < size())
+            erase(m_start + __new_size, end());
         else
-            insert(m_start + new_size, value_type());
+            insert(m_start + __new_size, value_type());
     }
 };
 
