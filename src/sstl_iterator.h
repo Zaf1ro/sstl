@@ -30,8 +30,8 @@ struct __iterator_traits {
     typedef typename Iter::value_type           value_type;
     typedef typename Iter::iterator_category    iterator_category;
     typedef typename Iter::difference_type      difference_type;
-    typedef typename Iter::pointer_type         pointer_type;
-    typedef typename Iter::reference_type       reference_type;
+    typedef typename Iter::pointer              pointer;
+    typedef typename Iter::reference            reference;
 };
 
 /**
@@ -42,8 +42,8 @@ struct __iterator_traits<T*> {
     typedef T           value_type;         // type of value
     typedef T*          iterator_category;  // type of sstl_iterator
     typedef ptrdiff_t   difference_type;    // type of distance between iterators
-    typedef T*          pointer_type;       // type of pointer of value
-    typedef T&          reference_type;     // type of reference of value
+    typedef T*          pointer;            // type of pointer of value
+    typedef T&          reference;          // type of reference of value
 };
 
 /**

@@ -27,12 +27,9 @@ struct __deque_iterator {
     typedef size_t                      size_type;
     typedef ptrdiff_t                   difference_type;
     typedef T**                         map_pointer;
+    typedef __deque_iterator            self;
 
-    typedef __deque_iterator self;
-    T* m_cur;
-    T* m_first;
-    T* m_last;
-    map_pointer m_node;
+    __deque_iterator(): m_node(0), m_cur(0), m_first(0), m_last(0) {}
 
     reference operator*() const {
         return *m_cur;
@@ -121,8 +118,7 @@ struct __deque_iterator {
                 m_node < that.m_node;
     }
 
-protected:
-    inline difference_type buffer_size() {
+    inline difference_type buffer_size() const {
         return __deque_buf_size(BufSize, sizeof(T));
     }
 
@@ -132,29 +128,36 @@ protected:
         m_first = *new_node;
         m_last = m_first + buffer_size();
     }
+
+public:
+    map_pointer m_node;
+    T* m_cur;
+    T* m_first;
+    T* m_last;
 };
 
 
-template <class T, class Alloc = __SSTL_DEFAULT_ALLOC(T), size_t BufSize = 0>
+template <class T, class Alloc = __SSTL_DEFAULT_ALLOC, size_t BufSize = 512>
 class deque {
 public:
-    typedef T                   value_type;
-    typedef size_t              size_type;
-    typedef value_type*         pointer;
-    typedef const value_type*   const_pointer;
-    typedef T&                  reference;
-    typedef const value_type&   const_reference;
-    typedef ptrdiff_t           difference_type;
-
-protected:
-    typedef __deque_iterator<T, T&, T*, BufSize>                iterator;
-    typedef __deque_iterator<T, const T&, const T*, BufSize>    const_iterator;
+    typedef T           value_type;
+    typedef size_t      size_type;
+    typedef T*          pointer;
+    typedef const T*    const_pointer;
+    typedef T&          reference;
+    typedef const T&    const_reference;
+    typedef ptrdiff_t   difference_type;
     typedef pointer*    map_pointer;
     typedef size_type   map_size_type;
     typedef Alloc       allocator_type;
-    typedef __SSTL_ALLOC(value_type, Alloc)     data_allocator;
-    typedef __SSTL_ALLOC(map_pointer, Alloc)    map_allocator;
 
+    typedef __deque_iterator<T, T&, T*, BufSize>                iterator;
+    typedef __deque_iterator<T, const T&, const T*, BufSize>    const_iterator;
+
+    typedef __SSTL_ALLOC(value_type, Alloc) data_allocator;
+    typedef __SSTL_ALLOC(pointer, Alloc)    map_allocator;
+
+public:
     map_pointer map;
     map_size_type map_size;
     iterator start;
@@ -164,21 +167,19 @@ public:
     /**
      * @brief   Construct an new container from a variety of data sources
      */
-    deque() {}
-
-    deque(const deque& x)
-    {
-        uninitialized_copy(x.begin(), x.end(), start);
+    deque(): map(0), map_size(0) {
+        fill_initialize(_initial_map_size(), value_type());
     }
 
-    deque(size_type n, const value_type& value): start(0), finish(0), map(0), map_size(0) {
-        fill_initialize(n ,value);
-    }
+    deque(const deque& x) : map(0), map_size(0)
+    { uninitialized_copy(x.begin(), x.end(), start); }
 
-    explicit deque(size_type n)
-    {
-        fill_initialize(n, value_type());
-    }
+    deque(size_type n, const value_type& value)
+    : map(0), map_size(0)
+    { fill_initialize(n ,value); }
+
+    explicit deque(size_type n): map(0), map_size(0)
+    { fill_initialize(n, value_type()); }
 
     /**
      * @brief   Returns an iterator to the first element
@@ -223,7 +224,8 @@ public:
     /**
      * @brief   Returns the number of elements
      */
-    size_type size() const {
+    size_type size() const
+    {
         return (size_type)(finish - start);
     }
 
@@ -248,8 +250,8 @@ public:
             ++finish.m_cur;
         } else {
             value_type copy = value;
-            reserve_map_at_back();
-            *(finish.m_node + 1) = allocate_node();
+            _reserve_map_at_back();
+            *(finish.m_node + 1) = _allocate_node();
             __SSTL_TRY {
                 construct(finish.m_cur, copy);
                 finish.set_node(finish.m_node + 1);
@@ -272,12 +274,12 @@ public:
     void push_front(const_reference value)
     {
         if(start.m_cur != start.m_first) {
-            construct(start.m_cur - 1, copy);
+            construct(start.m_cur - 1, value);
             --start.m_cur;
         } else {
             value_type copy = value;
-            reserve_map_at_front();
-            *(start.m_node - 1) = allocate_node();
+            _reserve_map_at_front();
+            *(start.m_node - 1) = _allocate_node();
             __SSTL_TRY {
                 start.set_node(start.m_node - 1);
                 start.m_cur = start.m_last -1;
@@ -303,7 +305,7 @@ public:
             destroy(finish.m_cur);
         } else {
             _deallocate_node(finish.m_first);
-            finish.set_node(finish.node-1);
+            finish.set_node(finish.m_node - 1);
             finish.m_cur = finish.m_last - 1;
             destroy(finish.m_cur);
         }
@@ -332,14 +334,14 @@ public:
     void clear()
     {
         for(auto node = start.m_node + 1; node < finish.m_node; ++node) {
-            destroy(*node, *node + buffer_size());
-            data_allocator::deallocate(*node, (size_type)buffer_size());
+            destroy(*node, *node + _buffer_size());
+            data_allocator::deallocate(*node, (size_type)_buffer_size());
         }
 
         if(start.m_node != finish.m_node) {
             destroy(start.m_cur, start.m_last);
             destroy(finish.m_first, finish.m_cur);
-            data_allocator::deallocate(finish.m_first, (size_type)buffer_size());
+            data_allocator::deallocate(finish.m_first, (size_type)_buffer_size());
         } else {
             destroy(start.m_cur, finish.m_cur);
         }
@@ -386,7 +388,7 @@ public:
     }
 
 protected:
-    iterator insert_aux(iterator pos, const_reference x)
+    iterator _insert_aux(iterator pos, const_reference x)
     {
         difference_type index = pos - start;
         value_type copy = x;
@@ -407,19 +409,19 @@ protected:
         return pos;
     }
 
-    void reserve_map_at_back(size_type nodes_to_add = 1) {
+    void _reserve_map_at_back(size_type nodes_to_add = 1) {
         if(nodes_to_add + 1 > map_size - (finish.m_node - map)) {
-            reallocate_map(nodes_to_add, false);
+            _reallocate_map(nodes_to_add, false);
         }
     }
 
-    void reserve_map_at_front(size_type nodes_to_add = 1) {
+    void _reserve_map_at_front(size_type nodes_to_add = 1) {
         if(nodes_to_add > start.m_node - map) {
-            reallocate_map(nodes_to_add, true);
+            _reallocate_map(nodes_to_add, true);
         }
     }
 
-    void reallocate_map(size_type nodes_to_add, bool add_at_front) {
+    void _reallocate_map(size_type nodes_to_add, bool add_at_front) {
         size_type old_num_nodes = finish.m_node - start.m_node + 1;
         size_type new_num_nodes = old_num_nodes + nodes_to_add;
 
@@ -445,18 +447,18 @@ protected:
         finish.set_node(new_start + old_num_nodes - 1);
     }
 
-    inline size_type buffer_size() {
+    inline size_type _buffer_size() {
         return __deque_buf_size(BufSize, sizeof(T));
     }
 
-    void _fill_initialize(size_type n, const_reference value)
+    void fill_initialize(size_type n, const_reference value)
     {
         _create_map_and_nodes(n);
         map_pointer cur;
         __SSTL_TRY
         {
             for(cur = start.m_node; cur < finish.m_node; ++cur) {
-                uninitialized_fill(*cur, *cur+buffer_size(), value);
+                uninitialized_fill(*cur, *cur + _buffer_size(), value);
                 uninitialized_fill(finish.m_first, finish.m_last, value);
             }
         }
@@ -468,8 +470,8 @@ protected:
     }
 
     void _create_map_and_nodes(size_type num_elements) {
-        size_type num_nodes = num_elements / buffer_size() + 1;
-        map_size = max(initial_map_size(), num_nodes + 2);
+        size_type num_nodes = num_elements / _buffer_size() + 1;
+        map_size = max(_initial_map_size(), num_nodes + 2);
         map = map_allocator::allocate(map_size);
         map_pointer p_start = map + (map_size - num_nodes) / 2;
         map_pointer p_finish = p_start + num_nodes - 1;
@@ -477,7 +479,7 @@ protected:
 
         __SSTL_TRY {
             for(cur = p_start; cur <= p_finish; ++cur) {
-                *cur = allocate_node();
+                *cur = _allocate_node();
             }
         }
 #ifdef __SSTL_USE_EXCEPTIONS
@@ -488,22 +490,23 @@ protected:
         start.set_node(p_start);
         finish.set_node(p_finish);
         start.m_cur = start.m_first;
-        finish.m_cur = finish.m_first + num_elements % buffer_size();
+        finish.m_cur = finish.m_first + num_elements % _buffer_size();
     }
 
-    size_type initial_map_size() { return 8; }
+    size_type _initial_map_size() { return 8; }
 
-    pointer allocate_node()
+    pointer _allocate_node()
     {
-        return map_allocator::allocate((size_type)buffer_size());
+        return data_allocator::allocate(_buffer_size());
     }
 
     void _deallocate_node(pointer p)
     {
-        data_allocator::deallocate(p, (size_type)buffer_size());
+        data_allocator::deallocate(p, _buffer_size());
     }
 };
 
 }; // sstl
+
 
 #endif // SSTL_DEQUE_H
