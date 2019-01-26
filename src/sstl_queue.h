@@ -35,13 +35,36 @@ public:
     }
     ~queue() { delete m_seq; }
 
+    /**
+     * @brief   Return whether the queue is empty
+     */
     bool empty() const { return m_seq->empty(); }
+
+    /**
+     * @brief   Return the number of elements in the queue
+     */
     size_type size() const { return m_seq->size(); }
+
+    /**
+     * @brief   Return a reference to the next element
+     */
     reference front() { return m_seq->front(); }
     const_reference front() const { return m_seq->front(); }
+
+    /**
+     * @brief   Return a reference to the last element
+     */
     reference back() { return m_seq->back(); }
     const_reference back() const { return m_seq->back(); }
+
+    /**
+     * @brief   Insert a new element at the end of the queue
+     */
     void push(const value_type& x) { m_seq->push_back(x); }
+
+    /**
+     * @brief   Remove the next element in the queue
+     */
     void pop() { m_seq->pop_front(); }
 };
 

@@ -25,7 +25,7 @@ public:
     typedef typename Sequence::const_reference  const_reference;
 
 protected:
-    Sequence m_seq;
+    Sequence* m_seq;
 
 public:
     stack() { m_seq = new Sequence(); }
@@ -36,11 +36,30 @@ public:
     }
     ~stack() { delete m_seq; }
 
+    /**
+     * @brief   Return whether the stack is empty
+     */
     bool empty() const { return m_seq->empty(); }
+
+    /**
+     * @brief   Return the number of elements
+     */
     size_type size() const { return m_seq->size(); }
+
+    /**
+     * @brief   Return a reference to the top element
+     */
     reference top() { return m_seq->back(); }
     const_reference top() const { return m_seq->back(); }
+
+    /**
+     * @brief   Insert a new element at the top of the stack
+     */
     void push(const value_type& x) { m_seq->push_back(x); }
+
+    /**
+     * @brief   Remove the element on top of the stack
+     */
     void pop() { m_seq->pop_back(); }
 };
 
