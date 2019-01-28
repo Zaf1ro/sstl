@@ -138,7 +138,7 @@ template<> struct __type_traits<long double> {
  */
 template <class T>
 struct __is_integer {
-    typedef __false_type is_integral;
+    typedef __false_type is_Integral;
 };
 
 template <>
