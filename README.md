@@ -21,6 +21,8 @@ Minimum implementation of core STL functionality.
 3. deque
 4. stack
 5. queue
+6. heap
+7. priority_queue
 
 #### 3.2 Associative Containers
 </br>
