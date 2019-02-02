@@ -29,8 +29,8 @@ public:
     typedef ptrdiff_t                   difference_type;
 
     _list_iterator() = default;
-    explicit _list_iterator(_list_node<_Tp>* _node): m_node(_node) {}
-    explicit _list_iterator(const iterator& it): m_node(it.m_node) {}
+    _list_iterator(_list_node<_Tp>* _node): m_node(_node) {}
+    _list_iterator(const iterator& it): m_node(it.m_node) {}
 
     bool operator==(const _Self& it) const { return m_node == it.m_node; }
     bool operator!=(const _Self& it) const { return m_node != it.m_node; }
@@ -38,23 +38,27 @@ public:
     reference operator*() const { return m_node->m_data; }
     pointer operator->() const { return &(operator*()); }
 
-    _Self& operator++() { // prefix
+    _Self& operator++() // prefix
+    {
         m_node = m_node->m_next;
         return *this;
     }
 
-    const _Self operator++(int) { // postfix
+    const _Self operator++(int) // postfix
+    {
         auto tmp = *this;
         ++*this;
         return tmp;
     }
 
-    _Self& operator--() {
+    _Self& operator--()
+    {
         m_node = m_node->m_prev;
         return *this;
     }
 
-    const _Self operator--(int) {
+    const _Self operator--(int)
+    {
         _Self tmp = *this;
         --*this;
         return tmp;
@@ -65,23 +69,40 @@ protected:
 };
 
 
-template <class T, class Alloc>
+template <class _Tp, class _Alloc>
 class _list_base {
 public:
-    typedef T                                   value_type;
-    typedef __SSTL_ALLOC(T, Alloc)              allocator_type;
-    typedef __SSTL_ALLOC(_list_node<T>, Alloc)  node_allocator;
+    typedef _Tp             value_type;
+    typedef _list_node<_Tp> _Node;
 
-    explicit _list_base(const allocator_type&) {
+    typedef __SSTL_ALLOC(_Tp, _Alloc)               allocator_type;
+    typedef __SSTL_ALLOC(_list_node<_Tp>, _Alloc)   node_allocator;
+
+protected:
+    /**
+     * @brief   Request memory for a node
+     */
+    _Node* allocate_node() const
+    {
+        return node_allocator::allocate(1);
+    }
+
+public:
+    allocator_type get_allocator() const
+    { return allocator_type(); }
+
+    explicit _list_base(const allocator_type&)
+    {
         m_node = allocate_node();
         m_node->m_next = m_node;
         m_node->m_next = m_node;
     }
 
-    ~_list_base() {
+    ~_list_base()
+    {
         auto cur = m_node->m_next;
         while( cur != m_node ) {
-            _list_node<T>* tmp = cur;
+            _Node* tmp = cur;
             cur = cur->m_next;
             sstl::destroy(&(tmp->m_data));
             deallocate_node(tmp);
@@ -91,78 +112,68 @@ public:
         deallocate_node(m_node);
     }
 
-    allocator_type get_allocator() const {
-        return allocator_type();
-    }
+    /**
+     * @brief   Release the memory of a node
+     */
+    void deallocate_node(_Node* __p) const
+    { node_allocator::deallocate(__p); }
 
     /**
-     * @brief   Request memory for a node
+     * @brief   Request memory and initiate node with specified value
      */
-    _list_node<T>* allocate_node()
+    _Node* create_node(const value_type& __val) const
     {
-        return node_allocator::allocate(1);
-    }
-
-    /**
-     * @brief   Recycle memory for a node
-     */
-    void deallocate_node(_list_node<T>* p)
-    {
-        node_allocator::deallocate(p);
-    }
-
-    /**
-     * @brief   Create a node and initiate with specified value
-     */
-    _list_node<T>* create_node(const value_type& value)
-    {
-        _list_node<T>* p = allocate_node();
-        construct(p, value);
+        _Node* p = allocate_node();
+        construct(p, __val);
         return p;
     }
 
 protected:
-    _list_node<T>* m_node;
+    _Node* m_node;
 };
 
 
-template <class T, class Alloc = __SSTL_DEFAULT_ALLOC>
-class list: protected _list_base<T, Alloc> {
+template <class _Tp, class _Alloc = __SSTL_DEFAULT_ALLOC>
+class list: protected _list_base<_Tp, _Alloc> {
 public:
-    typedef T               value_type;
-    typedef T*              pointer;
-    typedef const T*        const_pointer;
-    typedef T&              reference;
-    typedef const T&        const_reference;
+    typedef _Tp             value_type;
+    typedef _Tp*            pointer;
+    typedef const _Tp*      const_pointer;
+    typedef _Tp&            reference;
+    typedef const _Tp&      const_reference;
     typedef size_t          size_type;
     typedef ptrdiff_t       difference_type;
-    typedef _list_node<T>   _Node;
 
-    typedef _list_base<T, Alloc>                    _Base;
-    typedef typename _Base::allocator_type          allocator_type;
-    typedef _list_iterator<T, T&, T*>               iterator;
-    typedef _list_iterator<T, const T&, const T*>   const_iterator;
+    typedef _list_base<_Tp, _Alloc>         _Base;
+    typedef typename _Base::allocator_type  allocator_type;
+
+    typedef _list_iterator<_Tp, _Tp&, _Tp*>             iterator;
+    typedef _list_iterator<_Tp, const _Tp&, const _Tp*> const_iterator;
 
 protected:
+    typedef _list_node<_Tp> _Node;
     using _Base::m_node;
+    using _Base::allocate_node;
     using _Base::deallocate_node;
 
 public:
-    allocator_type get_allocator() const
+    allocator_type get_allocator()
     { return _Base::get_allocator(); }
 
     /**
      * @brief   Construct the list
      */
-    explicit list(const allocator_type& a = allocator_type())
-     : _Base(a) {}
+    list(const allocator_type& __alloc = allocator_type())
+     : _Base(__alloc) {}
 
-    list(size_type n, const_reference val, const allocator_type& a = allocator_type())
-    : _Base(a)
-    { insert(begin(), n, val); }
+    list(size_type __n, const value_type& __val,
+         const allocator_type& __alloc = allocator_type())
+     : _Base(__alloc)
+    { insert(begin(), __n, __val); }
 
-    explicit list(size_type n): _Base(allocator_type())
-    { insert(begin(), n, T()); }
+    explicit list(size_type __n)
+     : _Base(allocator_type())
+    { insert(begin(), __n, value_type()); }
 
     /**
      * @brief   Destruct the list
@@ -211,65 +222,70 @@ public:
 
     /**
      * @brief   Insert element(s) at the specified location
-     * @param   position: iterator before which
+     * @param   __pos: iterator before which
      *          the content will be inserted
-     * @param   value: element value to insert
+     * @param   __val: element value to insert
      */
-    iterator insert(iterator position, const_reference value)
+    iterator insert(iterator __pos, const value_type& __val)
     {
-        _Node* p_tmp = create_node(value);
-        p_tmp->m_next = position.m_node;
-        p_tmp->m_prev = position.m_node->m_prev;
+        _Node* p_tmp = create_node(__val);
+        p_tmp->m_next = __pos.m_node;
+        p_tmp->m_prev = __pos.m_node->m_prev;
         p_tmp->m_prev->m_next = p_tmp;
         p_tmp->m_next->m_prev = p_tmp;
         return p_tmp;
     }
 
-    iterator insert(iterator position) {
-        return insert(position, value_type());
-    }
+    iterator insert(iterator __pos)
+    { return insert(__pos, value_type()); }
 
     /**
-     * @param   n: number of elements to be inserted
+     * @param   __n: number of elements to be inserted
      */
-    void insert(iterator position, size_type n, const_reference value) {
-        for( ; n > 0; --n) {
-            insert(position, value);
+    void insert(iterator __pos, size_type __n,
+                const value_type& __val)
+    {
+        for( ; __n > 0; --__n) {
+            insert(__pos, __val);
         }
     }
 
     /**
-     * @param   first, last: the range of elements to insert
+     * @param   __first, __last: the range of elements to insert
      */
     template <class InputIter>
-    void insert(iterator position, InputIter first, InputIter last) {
-        for( ; first != last; ++first) {
-            insert(position, *first);
+    void insert(iterator __pos, InputIter __first,
+                InputIter __last)
+    {
+        for( ; __first != __last; ++__first) {
+            insert(__pos, *__first);
         }
     }
 
     /**
      * @brief   Insert an element to the beginning of list
      */
-    void push_front(const_reference value) { insert(begin(), value); }
+    void push_front(const value_type& __val)
+    { insert(begin(), __val); }
 
     /**
      * @brief   Add an element to the end of list
      */
-    void push_back(const_reference value) { insert(end(), value); }
+    void push_back(const value_type& __val)
+    { insert(end(), __val); }
 
     /**
      * @brief   Remove all elements satisfying specific criteria
-     * @param   value: value of element to remove
+     * @param   __val: value of element to remove
      */
-    void remove(const_reference value)
+    void remove(const value_type& __val)
     {
         iterator first = begin();
         iterator last = end();
         while( first != last ) {
             iterator next = first;
             ++next;
-            if( *first == value ) {
+            if( *first == __val ) {
                 erase(first);
             }
             first = next;
@@ -278,30 +294,30 @@ public:
 
     /**
      * @brief   Erase the specified elements from list
-     * @param   position: iterator to the element to remove
+     * @param   __pos: iterator to the element to remove
      */
-    iterator erase(iterator position)
+    iterator erase(iterator __pos)
     {
-        _Node* t_node = position.m_node;
+        _Node* t_node = __pos.m_node;
         _Node* next_node = t_node->m_next;
         _Node* prev_node = t_node->m_prev;
         prev_node->m_next = next_node;
         next_node->m_prev = prev_node;
-        destroy(t_node->m_data);
+        sstl::destroy(t_node->m_data);
         deallocate_node(t_node);
         return next_node;
     }
 
     /**
-     * @param   first, last: the range of elements to remove
+     * @param   __first, __last: the range of elements to remove
      */
-    iterator erase(iterator first, iterator last)
+    iterator erase(iterator __first, iterator __last)
     {
-        while( first != last ) {
-            erase(first);
-            ++first;
+        while( __first != __last ) {
+            erase(__first);
+            ++__first;
         }
-        return last;
+        return __last;
     }
 
     /**
@@ -319,14 +335,14 @@ public:
      * @param   n: the new size of container
      * @param   val: the value to initialize elements
      */
-    void assign(size_type n, const_reference val)
+    void assign(size_type __n, const value_type& __val)
     {
         iterator i = begin();
-        for( ; i != end() && n > 0; --n, ++i) {
-            *i = val;
+        for( ; i != end() && __n > 0; --__n, ++i) {
+            *i = __val;
         }
-        if( n > 0 )
-            insert(end(), n, val);
+        if( __n > 0 )
+            insert(end(), __n, __val);
         else
             erase(i, end());
     }
