@@ -10,39 +10,37 @@ namespace sstl {
 template <class _Tp, class _Alloc>
 class _vector_base {
 public:
-    typedef __SSTL_ALLOC(_Tp, _Alloc)  alloctor_type;
+    typedef _Alloc                      allocator_type;
+    typedef __SSTL_ALLOC(_Tp, _Alloc)   m_data_allocator;
 
-    alloctor_type get_allocator() const
-    { return m_allocator; }
+    allocator_type get_allocator() const
+    { return allocator_type(); }
 
-    _Tp* allocate(size_t __n) const
-    { return alloctor_type::allocate(__n); }
+    _vector_base(const allocator_type&)
+     : m_start(0), m_finish(0), m_end_of_storage(0) {}
 
-    void deallocate()
+    _vector_base(size_t __n, const allocator_type&)
+     : m_start(0), m_finish(0), m_end_of_storage(0)
     {
-        if( m_start )
-            alloctor_type::deallocate(m_start, m_end_of_storage - m_start);
-    }
-
-    explicit _vector_base(const alloctor_type& __a)
-     : m_allocator(__a), m_start(0), m_finish(0), m_end_of_storage(0) {}
-
-    _vector_base(size_t __n, const alloctor_type& __a)
-     : m_allocator(__a)
-    {
-        m_start = allocate(__n);
+        m_start = _allocate(__n);
         m_finish = m_start;
         m_end_of_storage = m_start + __n;
     }
 
     ~_vector_base()
-    { deallocate(); }
+    { _deallocate(m_start, m_end_of_storage - m_start); }
+
+protected:
+    _Tp* _allocate(size_t __n) const
+    { return m_data_allocator::allocate(__n); }
+
+    void _deallocate(_Tp* __p, size_t)
+    { m_data_allocator::deallocate(m_start, m_end_of_storage - m_start); }
 
 protected:
     _Tp* m_start;
     _Tp* m_finish;
     _Tp* m_end_of_storage;
-    alloctor_type m_allocator;
 };
 
 template<class _Tp, class _Alloc = __SSTL_DEFAULT_ALLOC>
@@ -60,14 +58,14 @@ public:
     typedef size_t      size_type;
     typedef ptrdiff_t   difference_type;
 
-    typedef typename _Base::alloctor_type alloctor_type;
+    typedef typename _Base::allocator_type allocator_type;
 
 protected:
     using _Base::m_start;
     using _Base::m_finish;
     using _Base::m_end_of_storage;
-    using _Base::allocate;
-    using _Base::deallocate;
+    using _Base::_allocate;
+    using _Base::_deallocate;
     using _Base::get_allocator;
 
     /**
@@ -88,7 +86,7 @@ protected:
         {
             const size_type old_size = size();
             const size_type new_size = old_size > 0 ? 2 * old_size : 1;
-            iterator new_start = allocate(new_size);
+            iterator new_start = _allocate(new_size);
             iterator new_finish = new_start;
 
             __SSTL_TRY
@@ -102,12 +100,12 @@ protected:
 #ifdef __SSTL_USE_EXCEPTIONS
             catch(...) {
                 destroy(new_start, new_finish);
-                alloctor_type::deallocate(new_start, new_size);
+                _deallocate(new_start, new_size);
                 throw;
             }
 #endif
             destroy(begin(), end());
-            deallocate();
+            _deallocate(m_start, m_end_of_storage - m_start);
             m_start = new_start;
             m_finish = new_finish;
             m_end_of_storage = new_start + new_size;
@@ -119,35 +117,27 @@ protected:
      * @param   __n: size of memory to be allocated
      * @param   __val: value used for initialization of element
      */
-    void _fill_initialize(size_type __n, const value_type& __val)
-    {
-        m_start = allocate(__n);
-        sstl::uninitialized_fill_n(m_start, __n, __val);
-        m_finish = m_start + __n;
-        m_end_of_storage = m_finish;
-    }
-
     template <class Integer>
-    void _vector_aux(Integer __first, Integer __last,
-                     __true_type)
+    void _vector_aux(Integer __n, Integer __val, __true_type)
     {
-        _fill_initialize(__first, __last);
+        m_start = _allocate(__n);
+        m_finish = uninitialized_fill_n(m_start, __n, __val);
+        m_end_of_storage = m_finish;
     }
 
     template <class InputIter>
     void _vector_aux(InputIter __first, InputIter __last,
                      __false_type)
     {
-        for( ; __first != __last; ++__first) {
+        for( ; __first != __last; ++__first)
             push_back(*__first);
-        }
     }
 
 public:
     /**
      * @brief   Returns the allocator associated with the container
      */
-    alloctor_type get_allocator()
+    allocator_type get_allocator()
      { return _Base::get_allocator(); }
 
     /**
@@ -195,25 +185,25 @@ public:
     /**
      * @brief   Constructor
      */
-    explicit vector(const alloctor_type& __alloc = alloctor_type())
+    explicit vector(const allocator_type& __alloc = allocator_type())
      : _Base(__alloc) {}
 
-    vector(size_type __n, const value_type& __val,
-           const alloctor_type& __alloc = alloctor_type())
-     : _Base(__n, __alloc)
-    { __fill_initialize(__n, __val); }
+    explicit vector(size_type __n)
+     : _Base(__n, allocator_type())
+    { uninitialized_fill_n(m_start, __n, value_type()); }
 
-    explicit vector(const vector<value_type, alloctor_type>& __x)
+    vector(size_type __n, const value_type& __val,
+           const allocator_type& __alloc = allocator_type())
+     : _Base(__n, __alloc)
+    { uninitialized_fill_n(m_start, __n, __val); }
+
+    explicit vector(const vector<value_type, allocator_type>& __x)
      : _Base(__x.size(), __x.get_allocator())
     { m_finish = uninitialized_copy(__x.begin(), __x.end(), value_type()); }
 
-    explicit vector(size_type __n)
-     : _Base(__n, alloctor_type())
-    { __fill_initialize(__n, value_type()); }
-
     template <class _InputIter>
     vector(_InputIter __first, _InputIter __last,
-           const alloctor_type& __alloc = alloctor_type())
+           const allocator_type& __alloc = allocator_type())
      : _Base(__alloc)
     {
         typedef typename __is_integer<_InputIter>::is_Integral _Is_Integral;
@@ -265,7 +255,7 @@ public:
             _expand_and_insert(__pos, __val);
     }
 
-    void insert(xiterator __pos) { insert(__pos, value_type()); }
+    void insert(iterator __pos) { insert(__pos, value_type()); }
 
     /**
      * @brief   Insert elements at the specified position from other container
@@ -302,7 +292,7 @@ public:
         {
             const size_type old_size = size();
             const size_type new_size = old_size + max(old_size, __n);
-            iterator new_start = allocate(new_size);
+            iterator new_start = _allocate(new_size);
             iterator new_finish = new_start;
             __SSTL_TRY
             {
@@ -317,12 +307,12 @@ public:
             catch(...)
             {
                 destroy(new_start, new_finish);
-                alloctor_type::deallocate(new_start, new_size);
+                _deallocate(new_start, new_size);
                 throw;
             }
         #endif
             destroy(m_start, m_finish);
-            deallocate();
+            _deallocate(m_start, m_end_of_storage - m_start);
             m_start = new_start;
             m_finish = new_finish;
             m_end_of_storage = new_start + new_size;
