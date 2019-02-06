@@ -1,5 +1,5 @@
-#ifndef SSTL_SSTL_PRIORITY_QUEUE_H
-#define SSTL_SSTL_PRIORITY_QUEUE_H
+#ifndef SSTL_PRIORITY_QUEUE_H
+#define SSTL_PRIORITY_QUEUE_H
 
 #include "sstl_config.h"
 #include "sstl_heap.h"
@@ -98,4 +98,4 @@ public:
 } // sstl
 
 
-#endif //SSTL_SSTL_PRIORITY_QUEUE_H
+#endif //SSTL_PRIORITY_QUEUE_H
