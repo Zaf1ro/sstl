@@ -328,6 +328,7 @@ protected:
 
 public:
     typedef __rb_tree_iterator<value_type, reference, pointer> iterator;
+    typedef __rb_tree_iterator<value_type, const_reference, const_pointer> const_iterator;
 
 private:
     /**
@@ -464,6 +465,50 @@ public:
     size_type max_size() const { return size_type(-1); }
 
 public:
+    /**
+     * @brief   Returns an iterator pointing to the
+     *          first element that is not less than value
+     */
+    iterator lower_bound(const key_type& __k)
+    {
+        link_type y = header;
+        link_type x = root();
+        while(x != NULL) {
+            if(!key_compare(key(x), __k)) { // the value of current node is larger than __k
+                y = x;
+                x = left(x);
+            } else
+                x = right(x);
+        }
+        return y;
+    }
+
+    iterator upper_bound(const key_type& __k)
+    {
+        link_type y = header;
+        link_type x = root();
+        while(x != NULL) {
+            if(key_compare(__k, key(x))) {
+                y = x;
+                x = left(x);
+            } else
+                x = right(x);
+        }
+        return y;
+    }
+
+    pair<iterator, iterator> equal_range(const key_type& __k)
+    {
+        return pair<iterator, iterator>(lower_bound(__k), upper_bound(__k));
+    }
+
+    difference_type count(const key_type& __k) const
+    {
+        pair<const_iterator, const_iterator> p = equal_range(__k);
+        difference_type n = __DISTANCE(p.first, p.second);
+        return n;
+    }
+
     pair<iterator, bool> insert_unique(const value_type& val)
     {
         link_type y = header; // parent of x
