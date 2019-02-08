@@ -21,30 +21,28 @@ struct pair {
     pair(const pair<_U1, _U2>& __p)
             : first(__p.first), second(__p.second) {}
 
-    inline bool operator==(const pair<_T1, _T2>& __x,
+    friend inline bool operator==(const pair<_T1, _T2>& __x,
                            const pair<_T1, _T2>& __y)
     { return __x.first == __y.first && __x.second == __y.second; }
 
-    inline bool operator!=(const pair<_T1, _T2>& __x,
+    friend inline bool operator!=(const pair<_T1, _T2>& __x,
                            const pair<_T1, _T2>& __y)
     { return !(__x == __y); }
 
-
-
-    inline bool operator<(const pair<_T1, _T2>& __x,
+    friend inline bool operator<(const pair<_T1, _T2>& __x,
                           const pair<_T1, _T2>& __y)
-    { return __x.first < __y.first ||
-             !(__y.first < __x.first) && __x.second < __y.second; }
+    { return __x.first < __y.first || (!(__y.first < __x.first)
+             && __x.second < __y.second); }
 
-    inline bool operator>(const pair<_T1, _T2>& __x,
+    friend inline bool operator>(const pair<_T1, _T2>& __x,
                           const pair<_T1, _T2>& __y)
     { return __y < __x; }
 
-    inline bool operator<=(const pair<_T1, _T2>& __x,
+    friend inline bool operator<=(const pair<_T1, _T2>& __x,
                            const pair<_T1, _T2>& __y)
     { return !(__x > __y); }
 
-    inline bool operator>=(const pair<_T1, _T2>& __x,
+    friend inline bool operator>=(const pair<_T1, _T2>& __x,
                            const pair<_T1, _T2>& __y)
     { return !(__x < __y); }
 };
