@@ -3,6 +3,7 @@
 
 #include "sstl_alloc.h"
 #include "sstl_uninitialized.h"
+#include "sstl_algobase.h"
 
 
 namespace sstl {
@@ -37,6 +38,22 @@ protected:
     void _deallocate(_Tp* __p, size_t)
     { m_data_allocator::deallocate(m_start, m_end_of_storage - m_start); }
 
+    template <class ForwardIter>
+    _Tp* _allocate_and_copy(size_t __n, ForwardIter __first, ForwardIter __last)
+    {
+        _Tp* res = _allocate(__n);
+        __SSTL_TRY {
+            sstl::uninitialized_copy(__first, __last, res);
+        }
+    #ifdef __SSTL_USE_EXCEPTIONS
+        catch(...) {
+            _deallocate(res, __n);
+            throw;
+        }
+    #endif
+        return res;
+    }
+
 protected:
     _Tp* m_start;
     _Tp* m_finish;
@@ -67,6 +84,7 @@ protected:
     using _Base::_allocate;
     using _Base::_deallocate;
     using _Base::get_allocator;
+    using _Base::_allocate_and_copy;
 
     /**
      * @brief   Make room for new elements and move old element to new place
@@ -134,6 +152,30 @@ protected:
     }
 
 public:
+    vector<_Tp, _Alloc>&
+    operator=(const vector<_Tp, _Alloc>& __x)
+    {
+        if(*this == __x)
+            return *this;
+
+        const size_type len = __x.size();
+        if(len > capacity()) { // expand the space of container
+            iterator tmp = _allocate_and_copy(len, __x.begin(), __x.end());
+            sstl::destroy(m_start, m_finish);
+            _deallocate(m_start, m_end_of_storage - m_start);
+            m_start = tmp;
+            m_end_of_storage = m_start + len;
+        } else if(size() >= len) { // have to destroy some old elements
+            iterator tmp = sstl::copy(__x.begin(), __x.end(), begin());
+            destroy(tmp, m_finish);
+        } else {
+            sstl::copy(__x.begin(), __x.begin()+size(), m_start);
+            sstl::uninitialized_copy(__x.begin() + size(), __x.end(), m_finish);
+        }
+        m_finish = m_start + len;
+        return *this;
+    }
+
     /**
      * @brief   Returns the allocator associated with the container
      */
@@ -213,7 +255,7 @@ public:
     /**
      * @brief    release memory of each element
      */
-    ~vector() { sstl::destroy(m_start, m_finish); }
+    virtual ~vector() { clear(); }
 
     /**
      * @brief   Return the first element
@@ -335,12 +377,28 @@ public:
      */
     iterator erase(iterator __pos)
     {
-        if(__pos + 1 != m_finish) {
+        if(__pos + 1 != m_finish) { // move forward
             sstl::copy(__pos + 1, m_finish, __pos);
         }
         sstl::destroy(--m_finish);
         return __pos;
     }
+
+    /**
+     * @brief   Remove the elements in the range [__first, __last)
+     * @param   __first, __last: range of elements to remove
+     */
+    iterator erase(iterator __first, iterator __last) {
+        iterator tmp = copy(__last, m_finish, __first); // move forward
+        destroy(tmp, m_finish);
+        m_finish = m_finish - (__last - __first);
+        return __first;
+    }
+
+    /**
+     * @brief   Erase all elements from the container
+     */
+    void clear() { erase(begin(), end()); }
 
     /**
      * @brief   Resize the container to contain certain number of elements
@@ -352,6 +410,35 @@ public:
             erase(m_start + __n_size, end());
         else
             insert(m_start + __n_size, value_type());
+    }
+
+    /**
+     * @brief   Increase the capacity of the container to
+     *          the specified size
+     * @param   __n: new capacity of the container
+     */
+    void reserve(size_type __n)
+    {
+        if(capacity() < __n) {
+            const size_type old_size = size();
+            iterator tmp = _allocate_and_copy(__n, m_start, m_finish);
+            destroy(m_start, m_finish);
+            _deallocate(m_start, m_end_of_storage - m_start);
+            m_start = tmp;
+            m_finish = tmp + old_size;
+            m_end_of_storage = tmp + __n;
+        }
+    }
+
+    /**
+     * @brief   Exchange the content of container
+     * @param   __x: container to exchange the contents with
+     */
+    void swap(vector<_Tp, _Alloc>& __x)
+    {
+        sstl::swap(m_start, __x.m_start);
+        sstl::swap(m_finish, __x.m_finish);
+        sstl::swap(m_end_of_storage, m_end_of_storage);
     }
 };
 
