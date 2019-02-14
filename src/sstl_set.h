@@ -9,8 +9,8 @@
 namespace sstl {
 
 template<class _Key,
-        class _Compare = sstl::less<_Key>,
-        class _Alloc = __SSTL_DEFAULT_ALLOC>
+         class _Compare = sstl::less<_Key>,
+         class _Alloc = __SSTL_DEFAULT_ALLOC>
 class set {
 public:
     typedef _Key key_type;
@@ -19,8 +19,9 @@ public:
     typedef _Compare value_compare;
 
 private:
-    typedef rb_tree<key_type, value_type, identity<value_type>,
-                    key_compare, _Alloc> _Rep_type;
+    typedef __rb_tree<key_type, value_type,
+                      sstl::identity<value_type>,
+                      key_compare, _Alloc> _Rep_type;
     _Rep_type m_t;
 
 public:
@@ -32,16 +33,17 @@ public:
     typedef typename _Rep_type::const_iterator const_iterator;
     typedef typename _Rep_type::size_type size_type;
     typedef typename _Rep_type::difference_type difference_type;
+    typedef typename _Rep_type::allocator_type allocator_type;
 
     set(): m_t(_Compare()) {}
     explicit set(const _Compare& __comp): m_t(__comp) {}
 
-    template <class InputIterator>
-    set(InputIterator __first, InputIterator __last)
+    template <class InputIter>
+    set(InputIter __first, InputIter __last)
      : m_t(_Compare()) { m_t.insert_unique(__first, __last); }
 
-    template <class InputIterator>
-    set(InputIterator __first, InputIterator __last,
+    template <class InputIter>
+    set(InputIter __first, InputIter __last,
         const _Compare& __comp): m_t(__comp)
     { m_t.insert_unique(__first, __last); }
 
@@ -54,7 +56,10 @@ public:
      */
     set<_Key, _Compare, _Alloc>&
     operator=(const set<_Key, _Compare, _Alloc>& __x)
-    { m_t = __x.m_t; return *this; }
+    {
+        m_t = __x.m_t;
+        return *this;
+    }
 
     /**
      * @brief   Returns the function object that compares the keys
@@ -65,6 +70,11 @@ public:
      * @brief   Returns the function object that compares the values
      */
     value_compare value_comp() const { return m_t.key_comp(); }
+
+    /**
+     * @brief   Returns the allocator associated with the container
+     */
+    allocator_type get_allocator() const { return m_t.get_allocator(); }
 
     /**
      * @brief   Returns an iterator to the first element
@@ -111,8 +121,8 @@ public:
      * @brief   Insert element(s) into the container
      * @param   first, last: range of elements to insert
      */
-    template <class InputIterator>
-    void insert(InputIterator __first, InputIterator __last)
+    template <class InputIter>
+    void insert(InputIter __first, InputIter __last)
     { m_t.insert_unique(__first, __last); }
 
     /**
@@ -121,8 +131,8 @@ public:
      */
     void erase(iterator __pos)
     {
-        typedef typename _Rep_type::iterator rep_iterator;
-        m_t.erase((rep_iterator)__pos);
+        typedef typename _Rep_type::iterator _Rep_iterator;
+        m_t.erase((_Rep_iterator)__pos);
     }
 
     /**
@@ -189,7 +199,7 @@ public:
 
     friend inline bool operator!=(const set<_Key, _Compare, _Alloc>& __x,
                                   const set<_Key, _Compare, _Alloc>& __y)
-    { return __x.m_t != __y.m_t; }
+    { return !(__x == __y); }
 
     friend inline bool operator<(const set<_Key, _Compare, _Alloc>& __x,
                                  const set<_Key, _Compare, _Alloc>& __y)
@@ -197,15 +207,20 @@ public:
 
     friend inline bool operator>(const set<_Key, _Compare, _Alloc>& __x,
                                  const set<_Key, _Compare, _Alloc>& __y)
-    { return __x.m_t > __y.m_t; }
+    { return __y < __x; }
 
     friend inline bool operator<=(const set<_Key, _Compare, _Alloc>& __x,
                                   const set<_Key, _Compare, _Alloc>& __y)
-    { return __x.m_t <= __y.m_t; }
+    { return __y < __x; }
 
     friend inline bool operator>=(const set<_Key, _Compare, _Alloc>& __x,
                                   const set<_Key, _Compare, _Alloc>& __y)
-    { return __x.m_t >= __y.m_t; }
+    { return !(__x < __y); }
+
+    inline void swap(set<_Key, _Compare, _Alloc>& __x,
+                     set<_Key, _Compare, _Alloc>& __y) {
+        __x.swap(__y);
+    }
 };
 
 } // sstl
