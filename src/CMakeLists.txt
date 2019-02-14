@@ -7,6 +7,15 @@ SET(SOURCE_FILES sstl_algobase.h
         sstl_uninitialized.h
         sstl_vector.h
         sstl_list.h
-        sstl_deque.h)
-
-#ADD_EXECUTABLE(abc ${SOURCE_FILES})
+        sstl_deque.h
+        sstl_queue.h
+        sstl_stack.h
+        sstl_heap.h
+        sstl_priority_queue.h
+        sstl_hashtable.h
+        sstl_hash_set.h
+        sstl_pair.h
+        sstl_tree.h
+        sstl_map.h
+        sstl_functional.h
+        sstl_set.h)
