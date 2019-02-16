@@ -13,9 +13,9 @@ namespace sstl {
 /**
  * @brief   _Compares the elements in the range [first1,last1)
  *          with those in the range beginning at first2
- * @param   first1: iterator to the beginning of the first container
- * @param   last1: iterator to the end of the first container
- * @param   first2: iterator to the beginning of the second container
+ * @param   __first1: iterator to the beginning of the first container
+ * @param   __last1: iterator to the end of the first container
+ * @param   __first2: iterator to the beginning of the second container
  */
 template <class _InputIter1, class _InputIter2>
 inline bool
@@ -32,7 +32,7 @@ equal(_InputIter1 __first1, _InputIter1 __last1,
 
 /**
  * @brief   Same as equal(first1, last1, first2)
- * @param   binary_pred: _Compare two parameters and represent
+ * @param   __bp: _Compare two parameters and represent
  *          the truth or falsehood on some condition
  */
 template <class _InputIter1, class _InputIter2,
@@ -48,9 +48,9 @@ euqal(_InputIter1 __first1, _InputIter1 __last1,
 
 /**
  * @brief   Assign 'value' to all the elements in the range [first,last)
- * @param   first: iterator to the beginning of container
- * @param   last: iterator to the end of container
- * @param   value: value to assign to the elements
+ * @param   __first: iterator to the beginning of container
+ * @param   __last: iterator to the end of container
+ * @param   __val: value to assign to the elements
  */
 template <class _InputIter, class _Tp>
 inline void
@@ -64,9 +64,9 @@ fill(_InputIter __first, _InputIter __last,
 /**
  * @brief   Assigns 'value' to the first n elements of
  *          the container pointed by first
- * @param   first: iterator to the beginning of container
- * @param   n: number of elements to fill
- * @param   value: value to assigned to the elements
+ * @param   __first: iterator to the beginning of container
+ * @param   __n: number of elements to fill
+ * @param   __val: value to assigned to the elements
  */
 template <class _InputIter, class _Size, class _Tp>
 inline void
@@ -78,7 +78,7 @@ fill_n(_InputIter __first, _Size __n, const _Tp& __val)
 
 /**
  * @brief   Exchange values of objects pointed to by two iterators
- * @param   iter1, iter2: iterator to the object to swap
+ * @param   __it1, __it2: iterator to the object to swap
  */
 template <class _ForwardIter>
 inline void 
@@ -90,7 +90,7 @@ iter_swap(_ForwardIter __it1, _ForwardIter __it2) {
 
 /**
  * @brief   Exchange the values of a and b
- * @param   a, b: values to swap
+ * @param   __a, __b: values to swap
  */
 template <class _Tp>
 inline void swap(const _Tp& __a, const _Tp& __b) {
@@ -101,7 +101,7 @@ inline void swap(const _Tp& __a, const _Tp& __b) {
 
 /**
  * @brief   Return the largest of a and b
- * @param   a, b: value to compare
+ * @param   __a, __b: value to compare
  */
 template <class _Tp>
 inline const _Tp& max(const _Tp& __a, const _Tp& __b) 
@@ -109,7 +109,7 @@ inline const _Tp& max(const _Tp& __a, const _Tp& __b)
 
 /**
  * @brief   Same as max(a, b)
- * @param   comp: Binary function that accepts two values 
+ * @param   __comp: Binary function that accepts two values
  *          of type T, and returns a value convertible to bool
  */
 template <class _Tp, class _Compare>
@@ -119,16 +119,17 @@ max(const _Tp& __a, const _Tp& __b, _Compare __comp)
 
 /**
  * @brief   Return the smallest of a and b
- * @param   a, b: values to compare
+ * @param   __a, __b: values to compare
  */
 template <class _Tp>
-inline const _Tp& min(const _Tp& __a, const _Tp& __b) 
+inline const _Tp&
+min(const _Tp& __a, const _Tp& __b)
 { return __b < __a ? __b : __a; }
 
 /**
  * @brief   Same as min(a, b)
- * @param   comp: Binary function that accepts two values of type T,
- *          and returns a value convertible to bool
+ * @param   __comp: Binary function that accepts two values
+ *          of type T, and returns a value convertible to bool
  */
 template <class _Tp, class _Compare>
 inline const _Tp& 
@@ -139,7 +140,8 @@ min(const _Tp& __a, const _Tp& __b, _Compare __comp) {
 template <class _InputIter, class _OutputIter, class _Distance>
 inline _OutputIter
 __copy(_InputIter __first, _InputIter __last,
-       _OutputIter __result, input_iterator_tag, _Distance*)
+       _OutputIter __result, input_iterator_tag,
+       _Distance*)
 {
     for( ; __first != __last; ++__first, ++__result)
         *__result = *__first;
@@ -148,7 +150,8 @@ __copy(_InputIter __first, _InputIter __last,
 
 template <class RandomAccessIter, class _OutputIter, class _Distance> inline _OutputIter
 __copy(RandomAccessIter __first, RandomAccessIter __last,
-       _OutputIter __result, random_access_iterator_tag, _Distance*)
+       _OutputIter __result, random_access_iterator_tag,
+       _Distance*)
 {
     for(_Distance n = __last - __first; n > 0;
         --n, ++__result, ++__first)
@@ -217,6 +220,60 @@ copy(_InputIter __first, _InputIter __last,
             __VALUE_TYPE(__first));
 }
 
+template <class _BidirectionalIter1,
+        class _BidirectionalIter2,
+        class _Distance>
+inline _BidirectionalIter2
+__copy_backward(_BidirectionalIter1 __first,
+                _BidirectionalIter1 __last,
+                _BidirectionalIter2 __result,
+                bidirectional_iterator_tag,
+                _Distance*)
+{
+    while ( __first != __last )
+        *--__result = *--__last;
+    return __result;
+}
+
+template <class _BidirectionalIter1,
+        class _BidirectionalIter2,
+        class _Distance>
+inline _BidirectionalIter2
+__copy_backward(_BidirectionalIter1 __first,
+                _BidirectionalIter1 __last,
+                _BidirectionalIter2 __result,
+                random_access_iterator_tag,
+                _Distance*)
+{
+    for(_Distance n = __last - __first; n > 0; --n)
+        *--__result = *--__last;
+    return __result;
+}
+
+template <class _BidirectionalIter1,
+        class _BidirectionalIter2,
+        class _BoolType>
+inline _BidirectionalIter2
+__copy_backward_dispatch(_BidirectionalIter1 __first,
+                         _BidirectionalIter1 __last,
+                         _BidirectionalIter2 __result,
+                         _BoolType)
+{
+    return __copy_backward(__first, __last, __result,
+                           __ITERATOR_CATEGORY(__first),
+                           __DISTANCE_TYPE(__first));
+}
+
+template <class _Tp>
+inline _Tp*
+__copy_backward_dispatch(_Tp* __first, _Tp* __last,
+                         _Tp* __result, __true_type)
+{
+    const ptrdiff_t n = __last - __first;
+    memmove(__result - n, __first, sizeof(_Tp) * n);
+    return __result - n;
+}
+
 /**
  * @brief   Copies the elements from the range [first, last) to another range ending at d_last.
  *          The elements are copied in reverse order
@@ -231,60 +288,6 @@ copy_backward(_BidirectionalIter1 __first,
     typedef typename __type_traits<_BidirectionalIter1>::has_trivial_assignment_operator _Trivial;
     return __copy_backward_dispatch(__first, __last,
                                     __result, _Trivial());
-}
-
-template <class _BidirectionalIter1,
-          class _BidirectionalIter2,
-          class _BoolType>
-inline _BidirectionalIter2
-__copy_backward_dispatch(_BidirectionalIter1 __first,
-                         _BidirectionalIter1 __last,
-                         _BidirectionalIter2 __result,
-                         _BoolType)
-{
-    return __copy_backward(__first, __last, __result,
-            __ITERATOR_CATEGORY(__first),
-            __DISTANCE_TYPE(__first));
-}
-
-template <class _Tp>
-inline _Tp*
-__copy_backward_dispatch(_Tp* __first, _Tp* __last,
-                         _Tp* __result, __true_type)
-{
-    const ptrdiff_t n = __last - __first;
-    memmove(__result - n, __first, sizeof(_Tp) * n);
-    return __result - n;
-}
-
-template <class _BidirectionalIter1,
-          class _BidirectionalIter2,
-          class _Distance>
-inline _BidirectionalIter2
-__copy_backward(_BidirectionalIter1 __first,
-                _BidirectionalIter1 __last,
-                _BidirectionalIter2 __result,
-                bidirectional_iterator_tag,
-                _Distance*)
-{
-    while ( __first != __last )
-        *--__result = *--__last;
-    return __result;
-}
-
-template <class _BidirectionalIter1,
-          class _BidirectionalIter2,
-          class _Distance>
-inline _BidirectionalIter2
-__copy_backward(_BidirectionalIter1 __first,
-                _BidirectionalIter1 __last,
-                _BidirectionalIter2 __result,
-                random_access_iterator_tag,
-                _Distance*)
-{
-    for(_Distance n = __last - __first; n > 0; --n)
-        *--__result = *--__last;
-    return __result;
 }
 
 } // sstl
