@@ -190,6 +190,14 @@ struct identity
     _Tp operator()(_Tp x) const { return x; }
 };
 
+template <class T>
+inline T identity_element(plus<T>)
+{ return T(0); }
+
+template <class T>
+inline T identity_element(multiplies<T>)
+{ return T(1); }
+
 /**
  * @brief   Return the pair's first element
  * @param   x: the pair object
