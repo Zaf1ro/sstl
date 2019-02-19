@@ -748,13 +748,13 @@ public:
             x = comp ? _left(x) : _right(x);
         }
         iterator j = iterator(y);
-        if(comp) // insert node into left
-            if(j == begin()) {
+        if(comp) { // insert node into left
+            if (j == begin()) {
                 return pair<iterator, bool>(_insert(x, y, __val), true);
             } else {
                 --j;
             }
-        
+        }
         // insert node into right
         if(m_key_compare(_key(j.m_node), _KeyOfValue()(__val))) {
             return pair<iterator, bool>(_insert(x, y, __val), true);

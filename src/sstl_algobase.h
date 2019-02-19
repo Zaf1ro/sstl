@@ -36,10 +36,10 @@ equal(_InputIter1 __first1, _InputIter1 __last1,
  *          the truth or falsehood on some condition
  */
 template <class _InputIter1, class _InputIter2,
-          class BinaryPredicate>
+          class _BinaryPred>
 inline bool
 euqal(_InputIter1 __first1, _InputIter1 __last1,
-      _InputIter2 __first2, BinaryPredicate __bp) {
+      _InputIter2 __first2, _BinaryPred __bp) {
     for( ; __first1 != __last1; ++__first1, ++__first2)
         if(!__bp(*__first1, *__first2))
             return false;
@@ -148,8 +148,8 @@ __copy(_InputIter __first, _InputIter __last,
     return __result;
 }
 
-template <class RandomAccessIter, class _OutputIter, class _Distance> inline _OutputIter
-__copy(RandomAccessIter __first, RandomAccessIter __last,
+template <class _RandomAccessIter, class _OutputIter, class _Distance> inline _OutputIter
+__copy(_RandomAccessIter __first, _RandomAccessIter __last,
        _OutputIter __result, random_access_iterator_tag,
        _Distance*)
 {
