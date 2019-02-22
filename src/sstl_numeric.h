@@ -19,9 +19,9 @@ _Tp
 accumulate(_InputIter __first, _InputIter __last,
            _Tp __init)
 {
-    for(; first != last; ++first)
-        init = init + *first;
-    return init;
+    for(; __first != __last; ++__first)
+        __init = __init + *__first;
+    return __init;
 }
 
 /**
@@ -36,7 +36,7 @@ accumulate(_InputIter __first, _InputIter __last,
 template <class _InputIter, class _OutputIter>
 _OutputIter
 adjacent_difference(_InputIter __first,
-                    _InputIter __last
+                    _InputIter __last,
                     _OutputIter __result)
 {
     if(__first == __last)
@@ -101,23 +101,23 @@ partial_sum(_InputIter __first, _InputIter __last,
  * @param   __exp: exponent as a value of floating-point
  *          or integral type
  */
-template <class _Tp, class Integer>
+template <class _Tp, class _Integer>
 inline _Tp
-power(_Tp __base, Integer __exp)
+power(_Tp __base, _Integer __exp)
 {
-    if(n == 0) {
-        return identity_element(multiplies<_Tp>);
+    if(__exp == 0) {
+        return identity_element(multiplies<_Tp>());
     } else {
         while((__exp & 1) == 0) {
             __exp >>= 1;
-            __base = multiplies(__base, __base);
+            __base = sstl::multiplies<_Tp>(__base, __base);
         }
         _Tp result = __base;
         __exp >>= 1;
         while(__exp != 0) {
-            x = multiplies(__base, __base);
+            __base = multiplies<_Tp>(__base, __base);
             if((__exp & 1) != 0)
-                result = multiplies(result, __base);
+                result = multiplies<_Tp>(result, __base);
             __exp >>= 1;
         }
         return result;
